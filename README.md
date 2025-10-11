@@ -828,7 +828,7 @@ See [LICENSE](LICENSE) file for full details.
 
 ## 👥 **Team**
 
-### **Team Cortex Coders (Pingaksh Gaur)** 🧠
+### **Team Cortex Coders 🧠**
 
 **Empowering education through AI innovation**
 
@@ -841,11 +841,9 @@ See [LICENSE](LICENSE) file for full details.
 Join our mission to make education accessible to everyone.
 
 ### **Contact & Community**
-- LinkedIn: _[@PingakshGaur](https://linkedin.com/in/pingakshgaur)_
-- 📧 **Email**: _[pingakshgaur@gmail.com](pingakshgaur@gmail.com)_
-- 💬 **Discussions**: _[GitHub Discussions](https://github.com/your-username/TatvaX-Prototype/discussions)_
-- 🐛 **Issues**: _[Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)_
-- 💡 **Feature Requests**: _[Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)_
+- **LinkedIn**: _[@PingakshGaur](https://linkedin.com/in/pingakshgaur)_
+- **Issues**: _[Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)_
+- **Feature Requests**: _[Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)_
 
 ---
 
@@ -856,7 +854,6 @@ Special thanks to:
 - **Translation APIs**: Google Translate, MyMemory, LibreTranslate
 - **Audio Libraries**: gTTS, pygame, SpeechRecognition, PyAudio
 - **NLP Tools**: NLTK, Sumy
-- **Open Source Community**: Contributors and supporters
 - **Students & Educators**: For feedback and inspiration
 
 ---
