@@ -793,7 +793,7 @@ nltk.download('stopwords')
 ### **Getting Help** 💬
 
 **Before Creating an Issue:**
-1. Check existing [GitHub Issues](https://github.com/your-username/TatvaX-Prototype/issues)
+1. Check existing [GitHub Issues](https://github.com/your-username/TatvaX-AI-Prototype/issues)
 2. Review troubleshooting section
 3. Search documentation
 
@@ -841,11 +841,11 @@ See [LICENSE](LICENSE) file for full details.
 Join our mission to make education accessible to everyone.
 
 ### **Contact & Community**
-
-- 📧 **Email**: [Create issue for contact](pingakshgaur@gmail.com)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/TatvaX-Prototype/discussions)
-- 🐛 **Issues**: [Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)
-- 💡 **Feature Requests**: [Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)
+- LinkedIn: _[@PingakshGaur](https://linkedin.com/in/pingakshgaur)_
+- 📧 **Email**: _[pingakshgaur@gmail.com](pingakshgaur@gmail.com)_
+- 💬 **Discussions**: _[GitHub Discussions](https://github.com/your-username/TatvaX-Prototype/discussions)_
+- 🐛 **Issues**: _[Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)_
+- 💡 **Feature Requests**: _[Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)_
 
 ---
 
