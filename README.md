@@ -38,15 +38,17 @@ TatvaX is a groundbreaking educational AI platform that democratises learning by
 - [Installation](#-installation)
 - [Usage](#-usage)
 - [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
+- [Architecture](#-Architecture)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
-- [Screenshots](#-screenshots)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [Troubleshooting](#-troubleshooting)
 - [License](#-license)
 - [Team](#-team)
+- [Project Stats](#-project-stats)
+- [Acknowledgements](#-acknowledgements)
+- [Quick Links](#-quick-links)
 
 ---
 
@@ -371,10 +373,25 @@ requests==2.31.0
 ### **Request Flow**
 
 ```
-User Input → Language Detection → Translation (if needed) →
-Content Retrieval → AI Processing → Response Generation →
-Translation to Target Language → Audio Generation (optional) →
+
+User Input
+    ↓
+Language Detection
+    ↓
+Translation (if needed)
+    ↓
+Content Retrieval
+    ↓
+AI Processing
+    ↓
+Response Generation
+    ↓
+Translation to Target Language
+    ↓
+Audio Generation (optional)
+    ↓
 Response Delivery to Frontend
+
 ```
 
 ### **Key Components**
@@ -607,12 +624,7 @@ TatvaX-AI-Prototype/
 │   │   └── 📄 social-studies-content.txt
 │   │
 │   └── 📂 institutional/
-│       ├── 📄 faq_responses.txt
-│       ├── 📄 institutional-faqs.txt
-│       ├── 📄 civic_sense.txt
-│       ├── 📄 traffic_rules.txt
-│       ├── 📄 teen_etiquettes.txt
-│       └── 📄 minor_rights.txt
+│       └── 📄 faq_responses.txt
 │
 └── 📂 temp_audio/              \# Temporary audio storage
 
@@ -748,7 +760,7 @@ nltk.download('stopwords')
 #### **❌ Voice Input Not Working**
 
 **Solutions:**
-- ✅ Use Chrome or Firefox (recommended)
+- ✅ Use Chrome or Edge (recommended)
 - ✅ Grant microphone permissions
 - ✅ Check microphone is not in use
 - ✅ Speak clearly in quiet environment
@@ -830,7 +842,7 @@ Join our mission to make education accessible to everyone.
 
 ### **Contact & Community**
 
-- 📧 **Email**: [Create issue for contact]
+- 📧 **Email**: [Create issue for contact](pingakshgaur@gmail.com)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/TatvaX-Prototype/discussions)
 - 🐛 **Issues**: [Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)
 - 💡 **Feature Requests**: [Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)
