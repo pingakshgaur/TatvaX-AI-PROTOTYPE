@@ -38,7 +38,7 @@ TatvaX is a groundbreaking educational AI platform that democratises learning by
 - [Installation](#-installation)
 - [Usage](#-usage)
 - [Tech Stack](#-tech-stack)
-- [Architecture](#-Architecture)
+- [Architecture](#-architecture)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
 - [Roadmap](#-roadmap)
@@ -46,8 +46,8 @@ TatvaX is a groundbreaking educational AI platform that democratises learning by
 - [Troubleshooting](#-troubleshooting)
 - [License](#-license)
 - [Team](#-team)
+- [Acknowledgements](#-acknowledgments)
 - [Project Stats](#-project-stats)
-- [Acknowledgements](#-acknowledgements)
 - [Quick Links](#-quick-links)
 
 ---
