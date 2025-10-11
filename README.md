@@ -600,21 +600,19 @@ Content-Type: application/json
 
 TatvaX-AI-Prototype/
 │
-├── 📄 app.py                    \# Main Flask application
-├── 📄 translation_service.py    \# Multi-API translation
-├── 📄 content_manager.py        \# Content library manager
-├── 📄 chatbot_helpers.py        \# AI/NLP processing
-├── 📄 requirements.txt          \# Python dependencies
-├── 📄 README.md                 \# Documentation
-├── 📄 LICENSE                   \# MIT License
-├── 📄 .gitignore               \# Git ignore rules
+├── 📄 app.py                       # Main Flask application
+├── 📄 translation_service.py       # Multi-API translation
+├── 📄 content_manager.py           # Content library manager
+├── 📄 chatbot_helpers.py           # AI/NLP processing
+├── 📄 requirements.txtt            # Python dependencies
+├── 📄 README.md                    # Documentation
 │
 ├── 📂 static/
-│   ├── 📄 style.css            \# UI styling
-│   ├── 📄 script.js            \# Frontend logic
+│   ├── 📄 style.css                # UI styling
+│   ├── 📄 script.js                # Frontend logic
 │
 ├── 📂 templates/
-│   └── 📄 index.html           \# Main interface
+│   └── 📄 index.html               # Main interface
 │
 ├── 📂 content_library/
 │   ├── 📂 subjects/
@@ -626,7 +624,7 @@ TatvaX-AI-Prototype/
 │   └── 📂 institutional/
 │       └── 📄 faq_responses.txt
 │
-└── 📂 temp_audio/              \# Temporary audio storage
+└── 📂 temp_audio/                 # Temporary audio storage
 
 ```
 
