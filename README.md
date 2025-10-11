@@ -3,7 +3,7 @@ TatvaX is a groundbreaking educational AI platform that democratises learning by
 
 <div align="center">
 
-![TatvaX Banner](https://img.shields.io/badge/TatvaX-AI-Prototype%20v1.0-blue?style=for-the-badge&logo=python)
+![TatvaX Banner](https://img.shields.io/badge/TatvaX-Prototype%20v1.0-blue?style=for-the-badge&logo=python)
 ![Languages](https://img.shields.io/badge/Languages-8%20Supported-green?style=for-the-badge)
 ![AI Powered](https://img.shields.io/badge/AI-Powered-orange?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Prototype-yellow?style=for-the-badge)
@@ -168,51 +168,41 @@ Voice input/output, clean interface, and multilingual support make TatvaX access
 ```
 git clone https://github.com/your-username/tatvax-ai-prototype.git
 cd tatvax-ai-prototype
-
-
+```
 
 2. **Create Virtual Environment**
-
 
 
 # Windows
 ```
 python -m venv venv
 venv\Scripts\activate
+```
 
 # macOS/Linux
 ```
 python3 -m venv venv
 source venv/bin/activate
-
 ```
 
 3. **Install Dependencies**
 ```
-
 pip install -r requirements.txt
-
 ```
 
 4. **Download NLTK Data**
 ```
-
 python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
-
 ```
 
 5. **Run TatvaX**
 ```
-
 python app.py
-
 ```
 
 6. **Access the Platform**
 ```
-
 Open browser → http://localhost:5000
-
 ```
 
 That's it! TatvaX is now running locally. 🎉
@@ -798,7 +788,7 @@ nltk.download('stopwords')
 ### **Getting Help** 💬
 
 **Before Creating an Issue:**
-1. Check existing [GitHub Issues](https://github.com/your-username/tatvax-ai-prototype/issues)
+1. Check existing [GitHub Issues](https://github.com/your-username/TatvaX-Prototype/issues)
 2. Review troubleshooting section
 3. Search documentation
 
@@ -848,8 +838,8 @@ Join our mission to make education accessible to everyone.
 ### **Contact & Community**
 
 - 📧 **Email**: [Create issue for contact]
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/tatvax-ai-prototype/discussions)
-- 🐛 **Issues**: [Report Bug](https://github.com/your-username/tatvax-ai-prototype/issues/new)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/TatvaX-Prototype/discussions)
+- 🐛 **Issues**: [Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)
 - 💡 **Feature Requests**: [Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)
 
 ---
@@ -905,8 +895,8 @@ Special thanks to:
 
 **If TatvaX inspired you or helped in any way, please ⭐ star this repository!**
 
-[![Star on GitHub](https://img.shields.io/github/stars/your-username/tatvax-ai-prototype?style=social)](https://github.com/your-username/tatvax-ai-prototype)
-[![Fork on GitHub](https://img.shields.io/github/forks/your-username/tatvax-ai-prototype?style=social)](https://github.com/your-username/tatvax-ai-prototype/fork)
+[![Star on GitHub](https://img.shields.io/github/stars/your-username/TatvaX-Prototype?style=social)](https://github.com/your-username/TatvaX-Prototype)
+[![Fork on GitHub](https://img.shields.io/github/forks/your-username/TatvaX-Prototype?style=social)](https://github.com/your-username/TatvaX-Prototype/fork)
 
 </div>
 
