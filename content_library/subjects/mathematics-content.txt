@@ -1,0 +1,375 @@
+# MATHEMATICS - Complete Learning Guide
+
+## Chapter 1: Number System
+
+**Natural Numbers**
+Natural numbers are counting numbers starting from 1, 2, 3, 4, and so on.
+These are the first numbers we learn to count with.
+Examples: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10...
+
+**Whole Numbers**  
+Whole numbers include all natural numbers plus zero.
+Set of whole numbers: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10...
+Zero is the smallest whole number.
+
+**Integers**
+Integers include positive numbers, negative numbers, and zero.
+Examples: ...-3, -2, -1, 0, 1, 2, 3...
+Positive integers: 1, 2, 3, 4...
+Negative integers: -1, -2, -3, -4...
+
+**Rational Numbers**
+Rational numbers can be expressed as fractions where denominator is not zero.
+Examples: 1/2, 3/4, -2/5, 0.5, 0.75
+Every integer is also a rational number.
+
+**Irrational Numbers**
+Numbers that cannot be expressed as fractions.
+Examples: π (pi), √2, √3, e
+These have non-terminating, non-repeating decimal expansions.
+
+## Chapter 2: Basic Operations
+
+**Addition**
+Addition means combining two or more numbers to get their sum.
+Symbol: + (plus sign)
+Example: 5 + 3 = 8
+Properties:
+- Commutative: a + b = b + a
+- Associative: (a + b) + c = a + (b + c)
+- Identity: a + 0 = a
+
+**Subtraction**
+Subtraction means finding the difference between two numbers.
+Symbol: - (minus sign)
+Example: 8 - 3 = 5
+Subtraction is the inverse operation of addition.
+
+**Multiplication**
+Multiplication is repeated addition or finding the product of numbers.
+Symbol: × or * (times sign)
+Example: 4 × 3 = 12 (which is 4 + 4 + 4)
+Properties:
+- Commutative: a × b = b × a
+- Associative: (a × b) × c = a × (b × c)
+- Identity: a × 1 = a
+- Zero property: a × 0 = 0
+
+**Division**
+Division is splitting a number into equal parts.
+Symbol: ÷ or / (division sign)
+Example: 12 ÷ 3 = 4
+Division is the inverse operation of multiplication.
+
+## Chapter 3: BODMAS Rule
+
+**Order of Operations**
+BODMAS stands for:
+- **B**rackets
+- **O**rders (powers and roots)
+- **D**ivision
+- **M**ultiplication
+- **A**ddition
+- **S**ubtraction
+
+**How to Use BODMAS**
+1. First solve operations inside Brackets ( )
+2. Then solve Orders (powers like 2², roots like √9)
+3. Then solve Division and Multiplication from left to right
+4. Finally solve Addition and Subtraction from left to right
+
+**Example:**
+Solve: 2 + 3 × 4 - 1
+Step 1: No brackets or orders
+Step 2: Multiplication first: 3 × 4 = 12
+Step 3: Now we have: 2 + 12 - 1
+Step 4: Left to right: 2 + 12 = 14, then 14 - 1 = 13
+Answer: 13
+
+## Chapter 4: Fractions
+
+**What is a Fraction?**
+A fraction represents part of a whole.
+Written as numerator/denominator
+Example: 3/4 means 3 parts out of 4 equal parts
+
+**Types of Fractions**
+- **Proper fraction**: Numerator < Denominator (3/5, 2/7)
+- **Improper fraction**: Numerator ≥ Denominator (7/5, 8/3)
+- **Mixed number**: Whole number + proper fraction (2 1/3, 1 3/4)
+
+**Adding Fractions**
+- **Like fractions** (same denominator): Add numerators, keep denominator
+  Example: 2/7 + 3/7 = 5/7
+- **Unlike fractions** (different denominators): Find common denominator first
+  Example: 1/3 + 1/4 = 4/12 + 3/12 = 7/12
+
+**Subtracting Fractions**
+Follow same rules as addition but subtract numerators.
+Example: 5/6 - 2/6 = 3/6 = 1/2
+
+**Multiplying Fractions**
+Multiply numerators together and denominators together.
+Example: 2/3 × 3/4 = 6/12 = 1/2
+
+**Dividing Fractions**
+Multiply by the reciprocal of the second fraction.
+Example: 2/3 ÷ 1/4 = 2/3 × 4/1 = 8/3
+
+## Chapter 5: Decimals
+
+**Understanding Decimals**
+Decimals use place value system with decimal point.
+Place values after decimal: tenths, hundredths, thousandths
+
+**Example: 25.347**
+- 2 is in tens place
+- 5 is in ones place
+- 3 is in tenths place
+- 4 is in hundredths place
+- 7 is in thousandths place
+
+**Converting Fractions to Decimals**
+Divide numerator by denominator.
+Example: 3/4 = 3 ÷ 4 = 0.75
+
+**Adding and Subtracting Decimals**
+Align decimal points vertically.
+Example:
+  25.6
++ 13.47
+-------
+  39.07
+
+**Multiplying Decimals**
+1. Multiply as if they were whole numbers
+2. Count total decimal places in both numbers
+3. Place decimal point in answer
+
+Example: 2.5 × 1.3
+25 × 13 = 325
+Total decimal places: 1 + 1 = 2
+Answer: 3.25
+
+## Chapter 6: Percentages
+
+**What is Percentage?**
+Percent means "per hundred" or "out of 100"
+Symbol: %
+Example: 25% = 25/100 = 0.25
+
+**Converting Between Forms**
+- Fraction to percentage: Multiply by 100
+  Example: 3/4 = (3/4) × 100 = 75%
+- Percentage to fraction: Divide by 100
+  Example: 40% = 40/100 = 2/5
+- Decimal to percentage: Multiply by 100
+  Example: 0.6 = 0.6 × 100 = 60%
+
+**Finding Percentage of a Number**
+To find x% of a number: Multiply the number by x/100
+Example: 20% of 50 = (20/100) × 50 = 10
+
+**Applications**
+- Calculating discounts in shopping
+- Finding profit and loss in business
+- Calculating marks and grades
+- Interest calculations
+
+## Chapter 7: Basic Algebra
+
+**What is Algebra?**
+Algebra uses letters and symbols to represent unknown numbers.
+These letters are called variables or unknowns.
+Common variables: x, y, z, a, b, c
+
+**Algebraic Expressions**
+Combination of numbers, variables, and operations.
+Examples: 
+- 3x + 5
+- 2y - 7
+- 4a + 3b - 2
+
+**Terms in Algebra**
+- **Constant**: Numbers without variables (5, -3, 10)
+- **Variable**: Letters representing unknowns (x, y, z)
+- **Coefficient**: Number multiplying a variable (in 5x, coefficient is 5)
+- **Like terms**: Terms with same variables (3x and 7x)
+- **Unlike terms**: Terms with different variables (3x and 5y)
+
+**Simplifying Expressions**
+Combine like terms by adding or subtracting coefficients.
+Example: 3x + 5x - 2x = (3 + 5 - 2)x = 6x
+
+**Simple Equations**
+Equation shows two expressions are equal using = sign.
+Example: x + 5 = 12
+To solve: x = 12 - 5 = 7
+
+## Chapter 8: Basic Geometry
+
+**Points, Lines, and Angles**
+
+**Point**
+A point is an exact location with no size.
+Represented by a dot and named with capital letters.
+Example: Point A, Point B
+
+**Line**
+A straight path extending infinitely in both directions.
+Has no thickness and no endpoints.
+Named using two points on the line: Line AB
+
+**Line Segment**
+Part of a line with two endpoints.
+Has definite length.
+Example: Segment AB from point A to point B
+
+**Ray**
+Part of a line that starts at one point and extends infinitely in one direction.
+Has one endpoint called origin.
+Example: Ray AB starting from A
+
+**Angle**
+Formed when two rays meet at a common point called vertex.
+Measured in degrees (°)
+
+**Types of Angles**
+- **Acute angle**: Less than 90°
+- **Right angle**: Exactly 90°
+- **Obtuse angle**: Between 90° and 180°
+- **Straight angle**: Exactly 180°
+- **Reflex angle**: Between 180° and 360°
+
+## Chapter 9: Basic Shapes
+
+**Triangle**
+A polygon with three sides and three angles.
+Sum of all angles in a triangle = 180°
+
+**Types of Triangles by Sides**
+- **Equilateral**: All three sides equal
+- **Isosceles**: Two sides equal
+- **Scalene**: All sides different
+
+**Types of Triangles by Angles**
+- **Acute triangle**: All angles less than 90°
+- **Right triangle**: One angle equals 90°
+- **Obtuse triangle**: One angle greater than 90°
+
+**Quadrilaterals**
+Polygons with four sides.
+Sum of all angles = 360°
+
+**Types of Quadrilaterals**
+- **Square**: All sides equal, all angles 90°
+- **Rectangle**: Opposite sides equal, all angles 90°
+- **Rhombus**: All sides equal, opposite angles equal
+- **Parallelogram**: Opposite sides parallel and equal
+- **Trapezium**: One pair of parallel sides
+
+**Circle**
+All points equidistant from center.
+- **Radius**: Distance from center to any point on circle
+- **Diameter**: Line passing through center, touching circle at two points
+- **Circumference**: Perimeter of circle
+
+## Chapter 10: Measurement and Area
+
+**Units of Length**
+- Millimeter (mm): Smallest unit
+- Centimeter (cm): 10 mm = 1 cm
+- Meter (m): 100 cm = 1 m
+- Kilometer (km): 1000 m = 1 km
+
+**Area Formulas**
+**Rectangle**: Area = length × width
+**Square**: Area = side × side
+**Triangle**: Area = (1/2) × base × height
+**Circle**: Area = π × radius²
+
+**Perimeter Formulas**
+**Rectangle**: Perimeter = 2(length + width)
+**Square**: Perimeter = 4 × side
+**Triangle**: Perimeter = sum of all three sides
+**Circle**: Circumference = 2π × radius
+
+## Chapter 11: Data Handling
+
+**Collecting Data**
+Data is information collected about something.
+Can be collected through surveys, observations, experiments.
+
+**Organizing Data**
+- **Tally marks**: Used for counting (||||)
+- **Frequency**: How many times something appears
+- **Tables**: Organize data in rows and columns
+
+**Representing Data**
+**Bar Graph**: Uses bars of different heights
+- Helpful for comparing quantities
+- Each bar represents a category
+
+**Pie Chart**: Shows data as parts of a circle
+- Each slice represents a part of the whole
+- Useful for showing percentages
+
+**Line Graph**: Shows how data changes over time
+- Points connected by lines
+- Good for showing trends
+
+**Finding Average (Mean)**
+Add all values and divide by number of values.
+Example: Marks are 70, 80, 90
+Average = (70 + 80 + 90) ÷ 3 = 240 ÷ 3 = 80
+
+## Chapter 12: Problem Solving
+
+**Steps to Solve Word Problems**
+1. **Read carefully**: Understand what the problem is asking
+2. **Identify given information**: What facts are provided?
+3. **Find what needs to be calculated**: What is the question asking?
+4. **Choose the operation**: Addition, subtraction, multiplication, or division?
+5. **Solve step by step**: Work through the calculation
+6. **Check your answer**: Does it make sense?
+
+**Example Problem**
+"Rahul has 45 marbles. He gives 12 marbles to his friend and buys 8 more. How many marbles does he have now?"
+
+**Solution:**
+- Given: Started with 45 marbles
+- Gave away: 12 marbles
+- Bought: 8 more marbles
+- Calculation: 45 - 12 + 8 = 33 + 8 = 41
+- Answer: Rahul has 41 marbles now
+
+**Types of Problems**
+- Money problems (buying, selling, change)
+- Time problems (duration, schedules)
+- Distance problems (speed, travel)
+- Age problems (comparing ages)
+- Sharing problems (dividing equally)
+
+## Practice Tips
+
+**Daily Practice**
+- Solve at least 5 problems daily
+- Practice mental math for quick calculations
+- Use real-life situations to apply math concepts
+
+**Understanding vs Memorizing**
+- Focus on understanding concepts, not just memorizing formulas
+- Ask "why" something works the way it does
+- Connect new learning to what you already know
+
+**Making Mistakes**
+- Mistakes are part of learning
+- Check your work carefully
+- Learn from errors to avoid repeating them
+
+**Getting Help**
+- Ask questions when you don't understand
+- Work with classmates to solve problems
+- Use different methods to solve the same problem
+
+Remember: Mathematics is everywhere in daily life. From calculating change at a shop to measuring ingredients for cooking, math helps us solve real problems!

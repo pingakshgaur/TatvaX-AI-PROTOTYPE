@@ -1,0 +1,358 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TatvaX - Educational AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap"
+        rel="stylesheet">
+    <!-- Markdown rendering library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body data-new-gr-c-s-check-loaded="14.1255.0" data-gr-ext-installed="" data-new-gr-c-s-loaded="14.1255.0">
+    <!-- Landing Page -->
+    <div id="landing-page" class="page active">
+        <div class="landing-container">
+            <div class="hero-section">
+                <div class="logo-section">
+                    <div class="logo-wrapper">
+                        <div class="logo-placeholder">
+                            <i class="fa fa-space-shuttle"></i>
+                        </div>
+                    </div>
+                    <h1 class="hero-title">
+                        Tatva<span class="logo-highlight">X</span>
+                    </h1>
+                    <p class="hero-subtitle">Your Multilingual AI Learning Companion</p>
+                    <p class="hero-description">
+                        <span>आपका बहुभाषी शिक्षा सहायक</span> •
+                        <span>Powered by Advanced AI</span>
+                    </p>
+                </div>
+
+                <div class="mode-selection">
+                    <h2 class="mode-title">Choose Your Learning Path</h2>
+                    <div class="mode-cards">
+                        <div class="mode-card" id="subjects-mode-card">
+                            <div class="mode-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <h3>Subject Learning</h3>
+                            <p>Study any subject of your choice in your preferred language...</p>
+                            <div class="mode-features">
+                                <span><i class="fas fa-book"></i> 4 Core Subjects</span>
+                                <span><i class="fas fa-microphone"></i> Voice Support</span>
+                                <span><i class="fas fa-language"></i> 8 Languages</span>
+                            </div>
+                        </div>
+
+                        <div class="mode-card" id="institutional-mode-card">
+                            <div class="mode-icon">
+                                <i class="fas fa-question"></i>
+                            </div>
+                            <h3>Institutional FAQs</h3>
+                            <p>Get answers about your institution in your preferred language...</p>
+                            <div class="mode-features">
+                                <span><i class="fas fa-question-circle"></i> Comprehensive FAQs</span>
+                                <span><i class="fas fa-clock"></i> Instant Answers</span>
+                                <span><i class="fas fa-hourglass-half"></i> &lt;7s response</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="language-showcase">
+                    <h3>Supported Languages</h3>
+                    <div class="language-grid">
+                        <span class="language-item">हिंदी</span>
+                        <span class="language-item">বাংলা</span>
+                        <span class="language-item">मराठी</span>
+                        <span class="language-item">తెలుగు</span>
+                        <span class="language-item">தமிழ்</span>
+                        <span class="language-item">ગુજરાતી</span>
+                        <span class="language-item">English</span>
+                        <span class="language-item">ಕನ್ನಡ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subject Selection Page -->
+    <div id="subjects-page" class="page">
+        <div class="subjects-container">
+            <div class="page-header">
+                <button id="back-to-landing" class="nav-button" fdprocessedid="kl309t">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Home
+                </button>
+
+                <div class="header-controls">
+                    <div class="language-selector">
+                        <label for="languageSelect">
+                            <i class="fas fa-language"></i>
+                            Learning Language:
+                        </label>
+                        <select id="languageSelect" fdprocessedid="p34329">
+                            <option value="en">English</option>
+                            <option value="hi">हिंदी (Hindi)</option>
+                            <option value="bn">বাংলা (Bengali)</option>
+                            <option value="mr">मराठी (Marathi)</option>
+                            <option value="te">తెలుగు (Telugu)</option>
+                            <option value="ta">தமிழ் (Tamil)</option>
+                            <option value="gu">ગુજરાતી (Gujarati)</option>
+                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        </select>
+                    </div>
+
+                    <button id="feedback-button" class="feedback-button" fdprocessedid="wv0ma">
+                        <i class="fas fa-comment-dots"></i>
+                        Feedback
+                    </button>
+                </div>
+            </div>
+
+            <div class="subjects-content">
+                <h1 class="page-title">Choose Your Subject</h1>
+                <p class="page-subtitle">Select a subject to start learning with AI-powered assistance</p>
+
+                <div class="subjects-grid" id="subjects-grid">
+                    <!-- Subjects will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Interface Page -->
+    <div id="chat-page" class="page">
+        <div class="chat-container">
+            <div class="chat-header">
+                <button id="back-to-subjects" class="nav-button" fdprocessedid="ttmwao">
+                    <i class="fas fa-arrow-left"></i>
+                    Back
+                </button>
+
+                <div class="chat-info">
+                    <h1 id="chat-title">TatvaX Assistant</h1>
+                    <p id="chat-subtitle">AI-Powered Learning</p>
+                </div>
+
+                <div class="chat-controls">
+                    <button id="translate-mode" class="control-btn" title="Translation Mode" fdprocessedid="fukcii">
+                        <i class="fas fa-language"></i>
+                    </button>
+                    <button id="clear-chat" class="control-btn" title="Clear Chat" fdprocessedid="q9kjea">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-main">
+                <div class="messages-container" id="messages-container">
+                    <!-- Messages will be added dynamically -->
+                </div>
+
+                <button id="scroll-to-bottom" class="scroll-to-bottom" fdprocessedid="r7kvao">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+
+            <!-- FIXED: Input section stays at bottom -->
+            <div class="input-section-fixed">
+                <div class="input-controls">
+                    <div class="language-display">
+                        <i class="fas fa-globe"></i>
+                        <span id="current-language">English</span>
+                    </div>
+
+                    <div class="voice-indicator" id="voice-indicator">
+                        <div class="voice-wave"></div>
+                        <div class="voice-wave"></div>
+                        <div class="voice-wave"></div>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <button id="voice-btn" class="voice-btn" title="Voice Input" fdprocessedid="c1xmum">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+
+                    <input type="text" id="message-input" placeholder="Ask me anything... | मुझसे कुछ भी पूछें..."
+                        class="message-input" autocomplete="off" fdprocessedid="a0sksc">
+
+                    <button id="send-button" class="send-button" disabled="" title="Send Message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="input-footer">
+                    <div class="footer-info">
+                        <small>
+                            <i class="fas fa-robot"></i>
+                            TatvaX - Multilingual AI Student Assistant
+                        </small>
+                    </div>
+                    <div class="footer-credits">
+                        <small>
+                            Made with ❤️ by <strong>Team Cortex Coders</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="feedback-modal">
+        <div class="feedback-modal-content">
+            <div class="feedback-header">
+                <h2><i class="fas fa-comment-dots"></i> Share Your Feedback</h2>
+                <button id="close-feedback" class="close-modal" fdprocessedid="i0qpg">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="feedback-form" class="feedback-form">
+                <div class="rating-section">
+                    <label>How would you rate TatvaX?</label>
+                    <div class="star-rating">
+                        <input type="radio" name="rating" value="5" id="star5">
+                        <label for="star5" class="star">★</label>
+                        <input type="radio" name="rating" value="4" id="star4">
+                        <label for="star4" class="star">★</label>
+                        <input type="radio" name="rating" value="3" id="star3">
+                        <label for="star3" class="star">★</label>
+                        <input type="radio" name="rating" value="2" id="star2">
+                        <label for="star2" class="star">★</label>
+                        <input type="radio" name="rating" value="1" id="star1">
+                        <label for="star1" class="star">★</label>
+                    </div>
+                </div>
+
+                <div class="feedback-input-group">
+                    <label for="feedback-name">Your Name (Optional)</label>
+                    <input type="text" id="feedback-name" placeholder="Enter your name"
+                        data-nlok-ref-guid="0ead88b5-5711-4dab-e6d4-5658c1f51321" fdprocessedid="5w915"
+                        autocomplete="off">
+                    <div id="norton-idsafe-field-styling-divId"
+                        style="height:16px;max-width:16px;vertical-align:top; position:absolute; top:1133.1500492095947px;left:304.2665351129347px;cursor:pointer;resize: both;z-index:2147483646;">
+                        <img id="norton-idsafe-field-logo-imgId"
+                            src="chrome-extension://admmjipmmciaobhojoghlmleefbicajg/images/npw-badge-icon-locked.svg"
+                            style="height:16px; width:16px;display:block;">
+                    </div>
+                </div>
+
+                <div class="feedback-input-group">
+                    <label for="feedback-email">Email (Optional)</label>
+                    <input type="email" id="feedback-email" placeholder="Enter your email" fdprocessedid="l720dn">
+                </div>
+
+                <div class="feedback-input-group">
+                    <label for="feedback-message">Your Feedback *</label>
+                    <textarea id="feedback-message" rows="4" placeholder="Share your experience with TatvaX..."
+                        required=""></textarea>
+                </div>
+
+                <div class="feedback-actions">
+                    <button type="button" id="cancel-feedback" class="cancel-btn" fdprocessedid="wj833l">
+                        <i class="far fa-thumbs-down"></i>
+                        Cancel</button>
+                    <button type="submit" class="submit-btn" data-nlok-ref-guid="20540192-d7ed-463d-c3ea-bca7e788d06e"
+                        fdprocessedid="ujra0k">
+                        <i class="far fa-thumbs-up"></i>
+                        Submit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Translation Modal -->
+    <div id="translation-modal" class="translation-modal">
+        <div class="translation-modal-content">
+            <div class="translation-header">
+                <h2><i class="fas fa-language"></i> Quick Translate</h2>
+                <button id="close-translation" class="close-modal" fdprocessedid="52mvuo">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="translation-form">
+                <div class="translation-input-group">
+                    <label>Text to Translate</label>
+                    <textarea id="translate-input" rows="3" placeholder="Enter text to translate..."></textarea>
+                </div>
+
+                <div class="translation-controls">
+                    <div class="language-select">
+                        <label>From</label>
+                        <select id="source-language" fdprocessedid="kqihs">
+                            <option value="auto">Auto Detect</option>
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="bn">Bengali</option>
+                            <option value="mr">Marathi</option>
+                            <option value="te">Telugu</option>
+                            <option value="ta">Tamil</option>
+                            <option value="gu">Gujarati</option>
+                            <option value="kn">Kannada</option>
+                        </select>
+                    </div>
+
+                    <button id="swap-languages" class="swap-btn" fdprocessedid="aacxl">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+
+                    <div class="language-select">
+                        <label>To</label>
+                        <select id="target-language" fdprocessedid="hfxka9">
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="bn">Bengali</option>
+                            <option value="mr">Marathi</option>
+                            <option value="te">Telugu</option>
+                            <option value="ta">Tamil</option>
+                            <option value="gu">Gujarati</option>
+                            <option value="kn">Kannada</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="translate-btn" class="translate-btn" fdprocessedid="jty2ti">
+                    <i class="fas fa-language"></i>
+                    Translate
+                </button>
+
+                <div class="translation-result" id="translation-result">
+                    <!-- Translation result will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner-container">
+                <div class="spinner"></div>
+            </div>
+            <p>TatvaX is processing...</p>
+        </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div id="notification" class="notification">
+        <div class="notification-content">
+            <i class="fas fa-check-circle"></i>
+            <span id="notification-message">Success!</span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+
+</body>
+
+</html>
