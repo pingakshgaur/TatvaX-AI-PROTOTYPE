@@ -1,4 +1,4 @@
-# Enhanced TatvaX 3.0 - Python Dependencies
+# TatvaX AI PROTOTYPE [1.0] - Python Dependencies
 
 # Core Flask Framework
 Flask==2.3.3
