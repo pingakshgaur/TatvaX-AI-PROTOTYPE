@@ -1,0 +1,28 @@
+TatvaX-AI-Prototype/
+│
+├── app.py                                 # Main Flask application
+├── translation_service.py                 # Multi-API translation
+├── content_manager.py                     # Content library manager
+├── chatbot_helpers.py                     # AI/NLP processing
+├── requirements.txt                       # Python dependencies
+├── README.md                              # Documentation
+│
+├── 📂 static/
+│   ├── style.css                          # UI styling
+│   ├── script.js                          # Frontend logic
+│
+├── 📂 templates/
+│   └── index.html                         # Main interface
+│
+├── 📂 content_library/
+│   ├── 📂 subjects/
+│   │   ├── mathematics-content.txt        # MATHEMATICS - Library
+│   │   ├── science-content.txt            # SCIENCE - Library
+│   │   ├── english-content.txt            # ENGLISH - Library
+│   │   └── social-studies-content.txt     # SOCIAL-STUDIES - Library
+│   │
+│   └── 📂 institutional/
+│       └── faq_responses.txt
+│
+└── 📂 temp_audio/                         # Temporary audio storage
+
