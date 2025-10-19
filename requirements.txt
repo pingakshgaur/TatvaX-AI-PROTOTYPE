@@ -1,4 +1,6 @@
-# TatvaX AI PROTOTYPE [1.0] - Python Dependencies
+# TatvaX AI PROTOTYPE [1.0]
+
+# ---- {Python Dependencies} ----
 
 # Core Flask Framework
 Flask==2.3.3
@@ -48,16 +50,17 @@ regex==2023.10.3
 # Unicode and Text Processing
 unidecode==1.3.7
 
-# Optional: Advanced ML Features (commented out for basic setup)
+# ---- Optional: Advanced ML Features (commented out for basic setup) ----
+
 # scikit-learn==1.3.2
 # numpy==1.24.4
 # pandas==2.0.3
 
-# Optional: Database Support (for future scaling)
+# ---- Optional: Database Support (for future scaling) ----
 # SQLAlchemy==2.0.23
 # Flask-SQLAlchemy==3.1.1
 
-# Optional: API Documentation
+# ---- Optional: API Documentation ----
 # Flask-RESTX==1.2.0
 
 # Development and Testing Dependencies
