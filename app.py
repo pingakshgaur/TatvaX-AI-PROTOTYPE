@@ -7,7 +7,9 @@ from datetime import datetime
 from translation_service import TranslationService
 from content_manager import ContentManager
 from chatbot_helpers import EnhancedChatbotHelpers
-
+import nltk
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 # Create Flask app
 app = Flask(
     __name__,
@@ -486,7 +488,8 @@ if __name__ == "__main__":
     print("\n\n\n🌐 Access TatvaX at: http://localhost:5000\n\n")
 
     try:
-        app.run(debug=True, host="0.0.0.0", port=5000)
+        port = int(os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=port, debug=False)
     except Exception as e:
         print(f"❌ Failed to start server: {e}")
         traceback.print_exc()
