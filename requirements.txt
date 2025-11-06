@@ -15,11 +15,10 @@ sumy==0.11.0
 
 # Text-to-Speech and Audio Processing
 gTTS==2.4.0
-# pygame==2.5.2
+
 
 # Speech Recognition
 SpeechRecognition==3.10.0
-pyaudio==0.2.11
 
 # Data Processing and Utilities
 python-dateutil==2.8.2
