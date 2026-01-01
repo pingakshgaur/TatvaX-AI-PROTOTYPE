@@ -16,6 +16,12 @@ TatvaX is a groundbreaking educational AI platform that democratises learning by
 
 ---
 
+## 🎥 **Watch TatvaX in Action**
+
+[![Video Title](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/hqo_TAZh0ls)
+
+---
+
 ## ⚠️ **IMPORTANT NOTICE - PROTOTYPE VERSION**
 
 > **This repository contains a PROTOTYPE implementation of TatvaX.**
