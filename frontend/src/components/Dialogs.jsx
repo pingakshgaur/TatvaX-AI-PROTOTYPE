@@ -1,9 +1,8 @@
-import { ArrowLeftRight, Copy, LogOut, Volume2 } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { applyTheme, useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
-import { speak } from "../lib/voice.js";
 import { Dialog } from "./ui.jsx";
 
 const THEMES = [
@@ -201,68 +200,6 @@ export function FeedbackDialog({ open, onClose }) {
         <p className="form-error" role="alert">{error}</p>
         <div className="dialog-footer"><button className="btn" type="submit" disabled={busy}>Send feedback</button></div>
       </form>
-    </Dialog>
-  );
-}
-
-export function TranslateDialog({ open, onClose }) {
-  const { t, app, lang, notify } = useApp();
-  const [text, setText] = useState("");
-  const [source, setSource] = useState("auto");
-  const [target, setTarget] = useState(lang === "en" ? "hi" : lang);
-  const [result, setResult] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const run = async () => {
-    if (!text.trim()) return;
-    setBusy(true);
-    setError("");
-    try {
-      const res = await api("/api/translate", { method: "POST", body: { text, source, target } });
-      setResult(res.text);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const options = app.languages.map((l) => <option key={l.code} value={l.code}>{l.native} ({l.name})</option>);
-
-  return (
-    <Dialog open={open} onClose={onClose} title={t("translate_title")} wide>
-      <div className="field">
-        <label className="label" htmlFor="tr-text">Text</label>
-        <textarea className="textarea" id="tr-text" dir="auto" maxLength={3000} value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run(); }} />
-      </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
-        <select className="select" style={{ width: "auto", flex: 1 }} aria-label="From" value={source} onChange={(e) => setSource(e.target.value)}>
-          <option value="auto">Detect language</option>{options}
-        </select>
-        <button className="icon-btn bordered" type="button" aria-label="Swap languages"
-          onClick={() => { if (source !== "auto") { setSource(target); setTarget(source); } }}><ArrowLeftRight size={16} /></button>
-        <select className="select" style={{ width: "auto", flex: 1 }} aria-label="To" value={target} onChange={(e) => setTarget(e.target.value)}>{options}</select>
-        <button className="btn" type="button" onClick={run} disabled={busy}>{t("translate_btn")}</button>
-      </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
-      {result && (
-        <div className="panel">
-          <div className="panel-body">
-            <p dir="auto" style={{ whiteSpace: "pre-wrap", marginBottom: 12 }}>{result}</p>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-secondary btn-sm" type="button"
-                onClick={() => navigator.clipboard.writeText(result).then(() => notify(t("copied")))}><Copy size={14} /> {t("copy")}</button>
-              <button className="btn btn-secondary btn-sm" type="button"
-                onClick={() => speak(result, { langCode: target, serverLanguages: app.tts_languages })
-                  .catch(() => notify("No voice is available for this language on this device", { kind: "error" }))}>
-                <Volume2 size={14} /> {t("listen")}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </Dialog>
   );
 }

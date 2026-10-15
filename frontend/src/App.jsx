@@ -11,6 +11,7 @@ import Overview from "./pages/Overview.jsx";
 import Progress from "./pages/Progress.jsx";
 import Subjects from "./pages/Subjects.jsx";
 import TeacherConsole from "./pages/Teacher.jsx";
+import Translate from "./pages/Translate.jsx";
 
 function Routed() {
   const { app, bootError, retryBoot } = useApp();
@@ -39,6 +40,7 @@ function Routed() {
         <Route path="notes" element={<LibraryIndex />} />
         <Route path="notes/:slug" element={<LibraryDocument />} />
         <Route path="progress" element={<Progress />} />
+        <Route path="translate" element={<Translate />} />
         <Route path="teacher" element={<TeacherConsole />} />
         <Route path="teacher/:tab" element={<TeacherConsole />} />
         <Route path="teacher/:tab/:slug" element={<TeacherConsole />} />

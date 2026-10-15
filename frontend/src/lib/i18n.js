@@ -5,7 +5,7 @@ const STRINGS = {
   en: {
     group_learn: "Learn", group_practice: "Practice", group_account: "You", group_admin: "Administration",
     nav_overview: "Overview", nav_subjects: "Subjects", nav_helpdesk: "Help desk", nav_quiz: "Assessments",
-    nav_library: "Study notes", nav_progress: "Progress", nav_teacher: "Teacher console",
+    nav_library: "Study notes", nav_translate: "Translator", nav_progress: "Progress", nav_teacher: "Teacher console",
     hero_eyebrow: "Multilingual learning platform",
     hero_title: "Learn anything, in your language",
     hero_sub: "Ask questions, take assessments and track your progress in 13 Indian languages, by typing or speaking.",

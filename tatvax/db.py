@@ -159,10 +159,29 @@ def close_db(_exc=None) -> None:
         db.close()
 
 
+# Columns added after the first release. Each is added once, so existing databases upgrade in place.
+MIGRATIONS = [
+    ("messages", "suggestions", "TEXT"),                         # JSON list of follow-up questions
+    ("users", "daily_goal", "INTEGER NOT NULL DEFAULT 5"),       # learning actions per day
+    ("quizzes", "subjects_json", "TEXT"),                        # JSON list of subject slugs
+    ("quizzes", "mode", "TEXT NOT NULL DEFAULT 'practice'"),     # practice | exam | timed
+    ("quizzes", "time_limit", "INTEGER"),                        # seconds, timed mode
+    ("quizzes", "duration_s", "INTEGER"),                        # seconds taken
+]
+
+
+def migrate(conn) -> None:
+    for table, column, declaration in MIGRATIONS:
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {declaration}")
+
+
 def init_db(path: str) -> None:
     conn = connect(path)
     try:
         conn.executescript(SCHEMA)
+        migrate(conn)
         conn.commit()
     finally:
         conn.close()

@@ -11,6 +11,7 @@ import "@fontsource/source-serif-4/600.css";
 import "katex/dist/katex.min.css";
 import "./styles/tokens.css";
 import "./styles/app.css";
+import "./styles/experience.css";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

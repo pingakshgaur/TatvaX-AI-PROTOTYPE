@@ -187,6 +187,10 @@ class LibraryIndex:
             self._avg_len = sum(len(t) for t in tokens) / n if tokens else 1.0
             self._signature = signature
 
+    def sections_in(self, conn, slug: str) -> list[Section]:
+        self._ensure_current(conn)
+        return [s for s in self._sections if s.slug == slug]
+
     def search(self, conn, query: str, slugs: list[str] | None = None, limit: int = 3) -> list[tuple[Section, float]]:
         self._ensure_current(conn)
         query_tokens = tokenize(query)

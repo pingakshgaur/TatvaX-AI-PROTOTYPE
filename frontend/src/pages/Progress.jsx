@@ -1,30 +1,19 @@
-import {
-  Award, Brain, ClipboardCheck, Flame, GraduationCap, Languages, Search, Sprout, TrendingUp, Trophy, Zap,
-} from "lucide-react";
+import { Target, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { BarList, ColumnChart, Ring } from "../components/Charts.jsx";
 import { useCrumbs, useShell } from "../components/Shell.jsx";
-import { EmptyState, Loading, PageHeader, Panel } from "../components/ui.jsx";
+import { CountUp, EmptyState, Loading, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { BadgeIcon, RARITY_COLOR } from "../lib/badgeIcons.jsx";
 import { formatNumber, shortDate, timeAgo } from "../lib/format.js";
 
-// Badge icon names sent by the API (see tatvax/gamification.py).
-const BADGE_ICONS = {
-  sprout: Sprout, search: Search, "graduation-cap": GraduationCap, "clipboard-check": ClipboardCheck,
-  trophy: Trophy, brain: Brain, flame: Flame, zap: Zap, languages: Languages, award: Award,
-};
-
-function BadgeIcon({ name }) {
-  const Icon = BADGE_ICONS[name] || Award;
-  return <Icon size={18} strokeWidth={1.75} aria-hidden="true" />;
-}
-
 export default function Progress() {
-  const { t, user } = useApp();
+  const { t, user, progressVersion } = useApp();
   const { openAccount } = useShell();
+  const location = useLocation();
   const [data, setData] = useState(null);
   useCrumbs([{ label: t("nav_progress") }]);
 
@@ -34,7 +23,14 @@ export default function Progress() {
       .then(([p, l]) => live && setData({ progress: p.progress, leaderboard: l.leaderboard, me: l.me }))
       .catch(() => live && setData({ progress: null, leaderboard: [], me: null }));
     return () => { live = false; };
-  }, [user?.id, user?.xp]);
+  }, [user?.id, progressVersion]);
+
+  // Links like /progress#achievements jump to that section once the data has loaded.
+  useEffect(() => {
+    if (!data || !location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    if (el) requestAnimationFrame(() => { el.scrollIntoView({ behavior: "smooth", block: "start" }); el.classList.add("flash"); });
+  }, [data, location.hash]);
 
   if (!data) return <Loading />;
   const { progress, leaderboard, me } = data;
@@ -70,18 +66,25 @@ export default function Progress() {
           <Ring fraction={progress.progress} size={78} stroke={7} label={String(progress.level)} sub={t("level")} />
           <div>
             <span className="eyebrow">{t("xp")}</span>
-            <span className="value">{formatNumber(progress.xp)}</span>
+            <span className="value"><CountUp value={progress.xp} /></span>
             <span className="meta">{t("xp_to_next", { n: formatNumber(progress.next_level_xp - progress.xp), level: progress.level + 1 })}</span>
           </div>
         </div>
         <div className="kpi">
           <span className="eyebrow">{t("day_streak")}</span>
-          <span className="value">{progress.streak.current}</span>
+          <span className="value"><CountUp value={progress.streak.current} /></span>
           <span className="meta">{t("best_streak", { n: progress.streak.best })}</span>
         </div>
         <div className="kpi">
+          <span className="eyebrow"><Target size={12} style={{ verticalAlign: "-2px" }} /> Daily goal</span>
+          <span className="value"><CountUp value={Math.min(progress.goal.done, progress.goal.goal)} /><small> / {progress.goal.goal}</small></span>
+          <div className="goal-bar"><span style={{ width: `${Math.min(100, (progress.goal.done / progress.goal.goal) * 100)}%` }} /></div>
+          <span className="meta">{progress.goal.complete ? "Complete for today" : "Change it from your profile menu"}</span>
+        </div>
+        <div className="kpi">
           <span className="eyebrow">{t("questions_asked")}</span>
-          <span className="value">{formatNumber(progress.questions_total)}</span>
+          <span className="value"><CountUp value={progress.questions_total} /></span>
+          <span className="meta">{progress.rank ? `Rank #${progress.rank} this week` : "Join the weekly leaderboard by creating an account"}</span>
         </div>
         <div className="kpi">
           <span className="eyebrow">{t("badges")}</span>
@@ -105,15 +108,16 @@ export default function Progress() {
         </Panel>
       </div>
 
-      <section className="section">
+      <section className="section" id="achievements" style={{ scrollMarginTop: 80, borderRadius: 12 }}>
         <div className="section-head"><h2>{t("badges")}</h2><span className="eyebrow">{earned} of {progress.badges.length} unlocked</span></div>
-        <div className="badge-grid">
-          {progress.badges.map((b) => (
-            <div key={b.id} className={`badge-cell${b.earned ? "" : " locked"}`}>
-              <span className="badge-mark"><BadgeIcon name={b.icon} /></span>
+        <div className="badge-grid rich stagger">
+          {progress.badges.map((b, i) => (
+            <div key={b.id} className={`badge-cell lift${b.earned ? "" : " locked"}`} style={{ "--rarity": RARITY_COLOR[b.rarity], "--i": i }}>
+              <span className="badge-mark"><BadgeIcon name={b.icon} size={20} /></span>
               <div>
                 <strong>{b.name}</strong>
                 <span>{b.description}</span>
+                <span className="rarity">{b.rarity}{b.earned && b.earned_at ? ` · ${timeAgo(b.earned_at)}` : ""}</span>
                 <span className="sr-only">{b.earned ? "Unlocked" : "Locked"}</span>
               </div>
             </div>
@@ -137,7 +141,7 @@ export default function Progress() {
             </table>
           ) : <div className="panel-body muted">No assessments yet. <Link to="/assessments">{t("start_quiz")}</Link></div>}
         </Panel>
-        <Panel title={t("leaderboard")} tight>
+        <Panel title={<h2 id="leaderboard" style={{ scrollMarginTop: 80 }}>{t("leaderboard")}</h2>} tight>
           {leaderboard.length ? (
             <table className="table">
               <thead><tr><th className="num">#</th><th>Learner</th><th className="num">{t("level")}</th><th className="num">XP this week</th></tr></thead>

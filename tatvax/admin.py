@@ -202,7 +202,8 @@ def _ai():
 
 
 def _ai_settings_response():
-    return {"ai": _ai().status(), "models": RECOMMENDED_MODELS}
+    row = get_db().execute("SELECT updated_at FROM settings WHERE key = 'nvidia_api_key'").fetchone()
+    return {"ai": {**_ai().status(), "saved_at": row["updated_at"] if row else None}, "models": RECOMMENDED_MODELS}
 
 
 @bp.get("/ai")
@@ -232,6 +233,15 @@ def update_ai_settings():
     db.commit()
     _ai().configure(get_setting(db, "nvidia_api_key"), get_setting(db, "ai_model"))
     return _ai_settings_response()
+
+
+@bp.get("/ai/key")
+@require_role("teacher")
+def reveal_ai_key():
+    """The full saved key, shown only when a teacher asks to reveal it in the AI settings tab."""
+    ai = _ai()
+    return {"api_key": ai.api_key or None, "source": ai.source,
+            "saved_at": (get_db().execute("SELECT updated_at FROM settings WHERE key = 'nvidia_api_key'").fetchone() or [None])[0]}
 
 
 @bp.post("/ai/test")

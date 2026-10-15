@@ -1,5 +1,6 @@
-"""XP, levels, daily streaks and badges."""
+"""XP, levels, daily streaks, daily goals and achievements."""
 
+import json
 import math
 from datetime import date, timedelta
 
@@ -8,22 +9,29 @@ from .db import now_iso, today
 QUESTION_XP = 5
 QUESTION_XP_DAILY_CAP = 100
 DAILY_BONUS_XP = 10
+DAILY_GOAL_XP = 15
 QUIZ_COMPLETION_XP = 10
 QUIZ_CORRECT_XP = 5
 QUIZ_PERFECT_BONUS_XP = 20
+TIMED_BONUS_XP = 10
 
-# badge id: (Lucide icon name, title, description)
+DEFAULT_DAILY_GOAL = 5
+
+# badge id: (Lucide icon name, title, description, rarity)
 BADGES = {
-    "first_question": ("sprout", "First Step", "Ask your first question"),
-    "curious_25": ("search", "Curious Mind", "Ask 25 questions"),
-    "scholar_100": ("graduation-cap", "Scholar", "Ask 100 questions"),
-    "first_quiz": ("clipboard-check", "Quiz Starter", "Finish your first quiz"),
-    "perfect_quiz": ("trophy", "Perfectionist", "Score 100% on a quiz of 5+ questions"),
-    "quiz_master": ("brain", "Quiz Master", "Finish 10 quizzes"),
-    "streak_3": ("flame", "On Fire", "Learn 3 days in a row"),
-    "streak_7": ("zap", "Unstoppable", "Learn 7 days in a row"),
-    "polyglot": ("languages", "Polyglot", "Learn in 3 different languages"),
-    "all_rounder": ("award", "All-Rounder", "Ask questions in 4 different subjects"),
+    "first_question": ("sprout", "First Step", "Ask your first question", "common"),
+    "first_quiz": ("clipboard-check", "Quiz Starter", "Finish your first assessment", "common"),
+    "curious_25": ("search", "Curious Mind", "Ask 25 questions", "rare"),
+    "streak_3": ("flame", "On Fire", "Learn 3 days in a row", "rare"),
+    "polyglot": ("languages", "Polyglot", "Learn in 3 different languages", "rare"),
+    "all_rounder": ("award", "All-Rounder", "Ask questions in 4 different subjects", "rare"),
+    "explorer": ("compass", "Explorer", "Take assessments in 3 different subjects", "rare"),
+    "perfect_quiz": ("trophy", "Perfectionist", "Score 100% on an assessment of 5+ questions", "epic"),
+    "marathon": ("timer", "Marathon Mind", "Finish an assessment of 20 or more questions", "epic"),
+    "speedster": ("zap", "Speedster", "Score 80% or more in a timed assessment", "epic"),
+    "quiz_master": ("brain", "Quiz Master", "Finish 10 assessments", "epic"),
+    "streak_7": ("crown", "Unstoppable", "Learn 7 days in a row", "legendary"),
+    "scholar_100": ("graduation-cap", "Scholar", "Ask 100 questions", "legendary"),
 }
 
 
@@ -55,6 +63,11 @@ def award_xp(conn, user_id: int, reason: str, points: int) -> int:
     return points
 
 
+def _xp(conn, user_id: int) -> int:
+    row = conn.execute("SELECT xp FROM users WHERE id = ?", (user_id,)).fetchone()
+    return row["xp"] if row else 0
+
+
 def _touch_day(conn, user_id: int, questions: int = 0, quizzes: int = 0) -> bool:
     """Record activity for today. Returns True if this is the first activity of the day."""
     day = today()
@@ -68,8 +81,42 @@ def _touch_day(conn, user_id: int, questions: int = 0, quizzes: int = 0) -> bool
     return first
 
 
+def daily_goal_status(conn, user_id: int) -> dict:
+    user = conn.execute("SELECT daily_goal FROM users WHERE id = ?", (user_id,)).fetchone()
+    goal = (user["daily_goal"] if user and user["daily_goal"] else DEFAULT_DAILY_GOAL)
+    row = conn.execute("SELECT questions, quizzes FROM activity WHERE user_id = ? AND day = ?", (user_id, today())).fetchone()
+    done = (row["questions"] + row["quizzes"]) if row else 0
+    return {"done": done, "goal": goal, "complete": done >= goal}
+
+
+def _goal_reached_now(conn, user_id: int) -> tuple[bool, int]:
+    """Award the daily-goal bonus the first time today's goal is met. Returns (reached_now, xp)."""
+    status = daily_goal_status(conn, user_id)
+    if not status["complete"]:
+        return False, 0
+    already = conn.execute(
+        "SELECT 1 FROM xp_events WHERE user_id = ? AND reason = 'daily_goal' AND created_at >= ?", (user_id, today())
+    ).fetchone()
+    if already:
+        return False, 0
+    return True, award_xp(conn, user_id, "daily_goal", DAILY_GOAL_XP)
+
+
+def _reward(conn, user_id: int, xp_before: int, gained: int) -> dict:
+    goal_now, goal_xp = _goal_reached_now(conn, user_id)
+    after = _xp(conn, user_id)
+    level_before, level_after = level_info(xp_before)["level"], level_info(after)["level"]
+    return {
+        "xp": gained + goal_xp,
+        "badges": check_badges(conn, user_id),
+        "level_up": level_after if level_after > level_before else None,
+        "goal": {**daily_goal_status(conn, user_id), "reached_now": goal_now, "bonus_xp": goal_xp},
+    }
+
+
 def record_question(conn, user_id: int, mode: str, subject: str | None, language: str) -> dict:
-    """Log a question and award XP. Returns {'xp': gained, 'badges': [new badges]}."""
+    """Log a question and award XP. Returns {'xp', 'badges', 'level_up', 'goal'}."""
+    xp_before = _xp(conn, user_id)
     conn.execute(
         "INSERT INTO question_log (user_id, mode, subject, language, created_at) VALUES (?, ?, ?, ?, ?)",
         (user_id, mode, subject, language, now_iso()),
@@ -82,16 +129,19 @@ def record_question(conn, user_id: int, mode: str, subject: str | None, language
     ).fetchone()[0]
     if earned_today < QUESTION_XP_DAILY_CAP:
         gained += award_xp(conn, user_id, "question", QUESTION_XP)
-    return {"xp": gained, "badges": check_badges(conn, user_id)}
+    return _reward(conn, user_id, xp_before, gained)
 
 
-def record_quiz(conn, user_id: int, score: int, total: int) -> dict:
+def record_quiz(conn, user_id: int, score: int, total: int, mode: str = "practice") -> dict:
+    xp_before = _xp(conn, user_id)
     first_today = _touch_day(conn, user_id, quizzes=1)
     gained = award_xp(conn, user_id, "daily_bonus", DAILY_BONUS_XP) if first_today else 0
     gained += award_xp(conn, user_id, "quiz", QUIZ_COMPLETION_XP + QUIZ_CORRECT_XP * score)
     if total >= 5 and score == total:
         gained += award_xp(conn, user_id, "perfect_quiz", QUIZ_PERFECT_BONUS_XP)
-    return {"xp": gained, "badges": check_badges(conn, user_id)}
+    if mode == "timed" and total and score / total >= 0.8:
+        gained += award_xp(conn, user_id, "timed_bonus", TIMED_BONUS_XP)
+    return _reward(conn, user_id, xp_before, gained)
 
 
 def streaks(conn, user_id: int) -> dict:
@@ -117,6 +167,15 @@ def streaks(conn, user_id: int) -> dict:
     return {"current": current, "best": max(best, current)}
 
 
+def _quiz_subjects(row) -> list[str]:
+    if row["subjects_json"]:
+        try:
+            return json.loads(row["subjects_json"])
+        except json.JSONDecodeError:
+            pass
+    return [row["subject"]]
+
+
 def check_badges(conn, user_id: int) -> list[dict]:
     """Award any newly earned badges and return them."""
     have = {r["badge"] for r in conn.execute("SELECT badge FROM badges WHERE user_id = ?", (user_id,))}
@@ -127,21 +186,23 @@ def check_badges(conn, user_id: int) -> list[dict]:
            FROM question_log WHERE user_id = ?""",
         (user_id,),
     ).fetchone()
-    quiz = conn.execute(
-        """SELECT COUNT(*) AS done,
-                  SUM(CASE WHEN score = total AND total >= 5 THEN 1 ELSE 0 END) AS perfect
-           FROM quizzes WHERE user_id = ? AND completed_at IS NOT NULL""",
+    quizzes = conn.execute(
+        "SELECT subject, subjects_json, score, total, mode FROM quizzes WHERE user_id = ? AND completed_at IS NOT NULL",
         (user_id,),
-    ).fetchone()
+    ).fetchall()
+    quiz_subjects = {s for q in quizzes for s in _quiz_subjects(q)}
     streak = streaks(conn, user_id)["current"]
 
     earned_now = {
         "first_question": stats["questions"] >= 1,
         "curious_25": stats["questions"] >= 25,
         "scholar_100": stats["questions"] >= 100,
-        "first_quiz": quiz["done"] >= 1,
-        "perfect_quiz": (quiz["perfect"] or 0) >= 1,
-        "quiz_master": quiz["done"] >= 10,
+        "first_quiz": len(quizzes) >= 1,
+        "perfect_quiz": any(q["total"] >= 5 and q["score"] == q["total"] for q in quizzes),
+        "quiz_master": len(quizzes) >= 10,
+        "marathon": any(q["total"] >= 20 for q in quizzes),
+        "speedster": any(q["mode"] == "timed" and q["total"] and q["score"] / q["total"] >= 0.8 for q in quizzes),
+        "explorer": len(quiz_subjects) >= 3,
         "streak_3": streak >= 3,
         "streak_7": streak >= 7,
         "polyglot": stats["languages"] >= 3,
@@ -151,17 +212,18 @@ def check_badges(conn, user_id: int) -> list[dict]:
     for badge, earned in earned_now.items():
         if earned and badge not in have:
             conn.execute("INSERT INTO badges (user_id, badge, earned_at) VALUES (?, ?, ?)", (user_id, badge, now_iso()))
-            new.append(badge_dict(badge, earned=True))
+            new.append(badge_dict(badge, earned=True, earned_at=now_iso()))
     return new
 
 
 def badge_dict(badge: str, earned: bool, earned_at: str | None = None) -> dict:
-    icon, name, description = BADGES[badge]
-    return {"id": badge, "icon": icon, "name": name, "description": description, "earned": earned, "earned_at": earned_at}
+    icon, name, description, rarity = BADGES[badge]
+    return {"id": badge, "icon": icon, "name": name, "description": description, "rarity": rarity,
+            "earned": earned, "earned_at": earned_at}
 
 
 def progress(conn, user_id: int) -> dict:
-    user = conn.execute("SELECT xp FROM users WHERE id = ?", (user_id,)).fetchone()
+    user = conn.execute("SELECT xp, is_guest, leaderboard FROM users WHERE id = ?", (user_id,)).fetchone()
     earned = {r["badge"]: r["earned_at"] for r in conn.execute(
         "SELECT badge, earned_at FROM badges WHERE user_id = ?", (user_id,)
     )}
@@ -181,20 +243,31 @@ def progress(conn, user_id: int) -> dict:
            WHERE q.user_id = ? GROUP BY q.subject ORDER BY questions DESC""",
         (user_id,),
     )]
-    quizzes = [dict(r) for r in conn.execute(
-        """SELECT q.id, COALESCE(d.title, q.subject) AS subject, q.topic, q.score, q.total, q.completed_at
-           FROM quizzes q LEFT JOIN documents d ON d.slug = q.subject
-           WHERE q.user_id = ? AND q.completed_at IS NOT NULL ORDER BY q.completed_at DESC LIMIT 10""",
+    titles = {r["slug"]: r["title"] for r in conn.execute("SELECT slug, title FROM documents")}
+    quizzes = []
+    for r in conn.execute(
+        """SELECT id, subject, subjects_json, topic, score, total, mode, completed_at FROM quizzes
+           WHERE user_id = ? AND completed_at IS NOT NULL ORDER BY completed_at DESC LIMIT 10""",
         (user_id,),
-    )]
-    totals = conn.execute(
-        "SELECT COUNT(*) FROM question_log WHERE user_id = ?", (user_id,)
-    ).fetchone()[0]
+    ):
+        names = [titles.get(s, s) for s in _quiz_subjects(r)]
+        quizzes.append({"id": r["id"], "subject": ", ".join(names), "topic": r["topic"], "score": r["score"],
+                        "total": r["total"], "mode": r["mode"], "completed_at": r["completed_at"]})
+
+    totals = conn.execute("SELECT COUNT(*) FROM question_log WHERE user_id = ?", (user_id,)).fetchone()[0]
+    rank = None
+    if user and not user["is_guest"] and user["leaderboard"]:
+        rank = next((row["rank"] for row in leaderboard(conn, limit=1000) if row["id"] == user_id), None)
+    order = ["legendary", "epic", "rare", "common"]
+    badges = sorted((badge_dict(b, b in earned, earned.get(b)) for b in BADGES),
+                    key=lambda b: (not b["earned"], order.index(b["rarity"]) if b["earned"] else -order.index(b["rarity"])))
     return {
         **level_info(user["xp"] if user else 0),
         "streak": streaks(conn, user_id),
+        "goal": daily_goal_status(conn, user_id),
+        "rank": rank,
         "questions_total": totals,
-        "badges": [badge_dict(b, b in earned, earned.get(b)) for b in BADGES],
+        "badges": badges,
         "activity": days,
         "subjects": subjects,
         "quizzes": quizzes,

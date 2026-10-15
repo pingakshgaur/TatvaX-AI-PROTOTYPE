@@ -1,5 +1,5 @@
 import {
-  ArrowUp, ClipboardCheck, Copy, CornerDownRight, Mic, PanelLeft, Plus, Square, Trash2, Volume2,
+  ArrowUp, ClipboardCheck, Copy, CornerDownRight, Languages, Mic, PanelLeft, Plus, Sparkles, Square, Trash2, Volume2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -13,7 +13,70 @@ import { SUGGESTIONS } from "../lib/i18n.js";
 import { plainText } from "../lib/markdown.js";
 import { canListen, listen, speak, stopSpeaking } from "../lib/voice.js";
 
-function AssistantTurn({ message, canAssess, onAssess }) {
+const CHIP_COLORS = ["var(--c-teal)", "var(--c-indigo)", "var(--c-coral)"];
+
+const MIC_ERRORS = {
+  "not-allowed": "Microphone access is blocked. Allow it from the icon in the browser's address bar, then try again.",
+  "service-not-allowed": "This browser doesn't allow speech recognition here. Try Chrome or Edge.",
+  "audio-capture": "No microphone was found. Check that one is connected.",
+  network: "Voice recognition needs an internet connection: Chrome and Edge send speech to their speech service.",
+  "language-not-supported": "Voice input isn't available for this language in this browser yet.",
+};
+
+function TranslateAnswer({ text, onClose }) {
+  const { app, lang, languageInfo } = useApp();
+  const [open, setOpen] = useState(false);
+  const [result, setResult] = useState(null);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => { if (!ref.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [open]);
+
+  const translate = async (target) => {
+    setOpen(false);
+    setResult({ target, text: null });
+    try {
+      const res = await api("/api/translate", { method: "POST", body: { text: text.slice(0, 3000), source: "auto", target } });
+      setResult({ target, text: res.text });
+    } catch (err) {
+      setResult({ target, error: err.message });
+    }
+  };
+
+  return (
+    <>
+      <span ref={ref} style={{ position: "relative" }}>
+        <button className="icon-btn" type="button" aria-label="Translate this answer" title="Translate this answer"
+          aria-expanded={open} onClick={() => setOpen((v) => !v)}><Languages size={16} /></button>
+        {open && (
+          <div className="lang-menu" role="menu">
+            {app.languages.filter((l) => l.code !== lang).map((l) => (
+              <button key={l.code} type="button" role="menuitem" onClick={() => translate(l.code)}>{l.native} <span className="muted">· {l.name}</span></button>
+            ))}
+          </div>
+        )}
+      </span>
+      {result && (
+        <div className="inline-translation" style={{ flexBasis: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
+            <span className="eyebrow">{languageInfo(result.target).native}</span>
+            <button className="icon-btn" type="button" style={{ marginLeft: "auto" }} aria-label="Close translation"
+              onClick={() => { setResult(null); onClose?.(); }}><X size={14} /></button>
+          </div>
+          {result.error ? <p className="form-error">{result.error}</p>
+            : result.text === null ? <span className="spinner" aria-label="Translating" />
+              : <Markdown source={result.text} />}
+        </div>
+      )}
+    </>
+  );
+}
+
+function AssistantTurn({ message, canAssess, onAssess, showSuggestions, onAsk }) {
   const { t, lang, app, notify } = useApp();
   const [speaking, setSpeaking] = useState(false);
 
@@ -47,6 +110,7 @@ function AssistantTurn({ message, canAssess, onAssess }) {
               onClick={() => navigator.clipboard.writeText(message.content).then(() => notify(t("copied")))}>
               <Copy size={15} />
             </button>
+            <TranslateAnswer text={message.content} />
             {canAssess && message.question && (
               <button className="icon-btn" type="button" aria-label={t("quiz_me")} title={t("quiz_me")} onClick={() => onAssess(message.question)}>
                 <ClipboardCheck size={16} />
@@ -57,9 +121,50 @@ function AssistantTurn({ message, canAssess, onAssess }) {
             )}
           </div>
         )}
+        {showSuggestions && message.suggestions?.length > 0 && (
+          <div className="suggestions" aria-label="Suggested follow-up questions">
+            <span className="eyebrow"><Sparkles size={13} /> Keep exploring</span>
+            {message.suggestions.map((s, i) => (
+              <button key={s} type="button" className="suggestion-chip" style={{ "--chip": CHIP_COLORS[i % 3], "--i": i }} onClick={() => onAsk(s)}>
+                <CornerDownRight size={15} aria-hidden="true" /> <span dir="auto">{s}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </article>
   );
+}
+
+// Live microphone level, shown while listening so students can see TatvaX hears them.
+function useMicLevel(active) {
+  const [levels, setLevels] = useState([0, 0, 0, 0, 0]);
+  useEffect(() => {
+    if (!active || !navigator.mediaDevices?.getUserMedia) return undefined;
+    let stream, ctx, frame, stopped = false;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => {
+      if (stopped) { s.getTracks().forEach((track) => track.stop()); return; }
+      stream = s;
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteFrequencyData(data);
+        setLevels([2, 5, 9, 14, 20].map((i) => Math.min(1, data[i] / 200)));
+        frame = requestAnimationFrame(tick);
+      };
+      tick();
+    }).catch(() => {});
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(frame);
+      stream?.getTracks().forEach((track) => track.stop());
+      ctx?.close();
+    };
+  }, [active]);
+  return levels;
 }
 
 export default function Chat({ mode }) {
@@ -124,7 +229,8 @@ export default function Chat({ mode }) {
         let lastQuestion = "";
         setMessages(rows.map((m) => {
           if (m.role === "user") lastQuestion = m.content;
-          return { id: m.id, role: m.role, content: m.content, engine: m.engine, question: m.role === "assistant" ? lastQuestion : undefined };
+          return { id: m.id, role: m.role, content: m.content, engine: m.engine, suggestions: m.suggestions,
+            question: m.role === "assistant" ? lastQuestion : undefined };
         }));
         stickRef.current = true;
       })
@@ -188,7 +294,8 @@ export default function Chat({ mode }) {
           schedule();
         } else if (event.type === "done") {
           cancelAnimationFrame(bufferRef.current.frame);
-          updateLast({ content: bufferRef.current.text, pending: false, engine: event.engine, sources: event.sources });
+          updateLast({ content: bufferRef.current.text, pending: false, engine: event.engine, sources: event.sources,
+            suggestions: event.suggestions });
           celebrate(event);
           loadHistory();
         } else if (event.type === "error") {
@@ -228,20 +335,43 @@ export default function Chat({ mode }) {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [input]);
 
-  const toggleMic = () => {
+  const micLevels = useMicLevel(listening);
+
+  const toggleMic = async () => {
     if (stopListeningRef.current) { stopListeningRef.current(); return; }
-    if (!canListen) { notify(t("voice_unsupported"), { kind: "error" }); return; }
+    if (!canListen) { notify(t("voice_unsupported"), { kind: "error", duration: 6000 }); return; }
+    if (!window.isSecureContext) {
+      notify("Voice input needs a secure (https) connection.", { kind: "error", duration: 6000 });
+      return;
+    }
     stopSpeaking();
+    // Ask for the microphone first, so the browser shows its permission prompt and we can
+    // explain a refusal clearly instead of failing silently.
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err) {
+        const code = err.name === "NotFoundError" ? "audio-capture" : "not-allowed";
+        notify(MIC_ERRORS[code], { kind: "error", duration: 7000 });
+        return;
+      }
+    }
     try {
       setListening(true);
+      let heard = false;
       stopListeningRef.current = listen(languageInfo().speech, {
-        onInterim: setInput,
+        onInterim: (text) => { heard = true; setInput(text); },
         onFinal: (text) => send(text),
         onError: (code) => {
-          if (code === "not-allowed") notify("Allow microphone access to ask by voice", { kind: "error" });
-          else if (code !== "no-speech" && code !== "aborted") notify(`Voice input error: ${code}`, { kind: "error" });
+          if (code === "no-speech") notify("I didn't hear anything. Tap the microphone and speak clearly.", { duration: 5000 });
+          else if (code !== "aborted") notify(MIC_ERRORS[code] || `Voice input stopped (${code}).`, { kind: "error", duration: 7000 });
         },
-        onEnd: () => { stopListeningRef.current = null; setListening(false); },
+        onEnd: () => {
+          stopListeningRef.current = null;
+          setListening(false);
+          if (!heard) textareaRef.current?.focus();
+        },
       });
     } catch {
       setListening(false);
@@ -269,7 +399,12 @@ export default function Chat({ mode }) {
     <div className={`chat${navigator.onLine ? "" : " has-offline-bar"}`}>
       <aside className={`chat-history${historyOpen ? " open" : ""}`} aria-label={t("history")}>
         <div className="chat-history-head">
-          <Link className="btn btn-block" to={base} onClick={() => { createdIdRef.current = null; }}><Plus size={16} /> {t("new_chat")}</Link>
+          <Link className="btn btn-block" to={base} onClick={() => {
+            controllerRef.current?.abort();
+            createdIdRef.current = null;
+            setMessages([]);
+            setInput("");
+          }}><Plus size={16} /> {t("new_chat")}</Link>
           <span className="eyebrow">{t("history")}</span>
         </div>
         <ul className="chat-history-list">
@@ -326,12 +461,22 @@ export default function Chat({ mode }) {
               </article>
             ) : (
               <AssistantTurn key={m.id ?? `a${i}`} message={m} canAssess={mode === "subject" && Boolean(subject)}
+                showSuggestions={i === messages.length - 1 && !busy} onAsk={send}
                 onAssess={(q) => navigate(`/assessments/${slug}?topic=${encodeURIComponent(q.slice(0, 80))}`)} />
             )))}
           </div>
         </div>
 
         <div className="composer">
+          {listening && (
+            <div className="listening-banner" role="status">
+              <span className="mic-meter" aria-hidden="true">{micLevels.map((v, i) => <span key={i} style={{ height: `${4 + v * 14}px` }} />)}</span>
+              {t("listening")}
+              <button className="btn btn-sm btn-danger" type="button" style={{ marginLeft: "auto" }} onClick={() => stopListeningRef.current?.()}>
+                <Square size={12} /> {t("stop")}
+              </button>
+            </div>
+          )}
           <form className="composer-box" onSubmit={(e) => { e.preventDefault(); if (busy) controllerRef.current?.abort(); else send(input); }}>
             <label className="sr-only" htmlFor="composer-input">{t("ask_placeholder")}</label>
             <textarea id="composer-input" ref={textareaRef} rows={1} dir="auto" maxLength={2000}

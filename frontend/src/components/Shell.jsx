@@ -1,14 +1,14 @@
 import {
-  BookOpen, Building2, ClipboardCheck, Languages, LayoutGrid, Library, Menu, MessageSquareText,
-  ShieldCheck, TrendingUp,
+  BookOpen, Building2, ClipboardCheck, Languages, LayoutGrid, Library, Menu, ShieldCheck,
 } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useApp } from "../context/AppContext.jsx";
-import { formatNumber } from "../lib/format.js";
 import { stopSpeaking } from "../lib/voice.js";
-import { AccountDialog, FeedbackDialog, TranslateDialog } from "./Dialogs.jsx";
+import Celebration from "./Celebration.jsx";
+import { AccountDialog, FeedbackDialog } from "./Dialogs.jsx";
+import ProfileMenu from "./ProfileMenu.jsx";
 import { Toasts } from "./ui.jsx";
 
 const ShellContext = createContext(null);
@@ -24,18 +24,17 @@ export function useCrumbs(crumbs) {
   useEffect(() => { setCrumbs(JSON.parse(key)); }, [key, setCrumbs]);
 }
 
-function Sidebar({ open, onNavigate, onAccount }) {
+function Sidebar({ open, onNavigate }) {
   const { t, user, app, lang, setLang } = useApp();
   const location = useLocation();
   const learnActive = location.pathname.startsWith("/learn") || location.pathname === "/subjects";
-  const link = (to, Icon, label, { end = false, active } = {}) => (
-    <NavLink to={to} end={end} onClick={onNavigate}
+  const link = (to, Icon, label, color, { end = false, active } = {}) => (
+    <NavLink to={to} end={end} onClick={onNavigate} style={{ "--nav-color": color }}
       className={({ isActive }) => `nav-link${(active ?? isActive) ? " active" : ""}`}>
       <Icon size={17} strokeWidth={1.75} aria-hidden="true" />
       <span>{label}</span>
     </NavLink>
   );
-  const registered = user && !user.is_guest;
 
   return (
     <aside className={`sidebar${open ? " open" : ""}`} aria-label="Primary">
@@ -47,23 +46,20 @@ function Sidebar({ open, onNavigate, onAccount }) {
       <nav className="sidebar-nav">
         <div className="nav-group">
           <span className="eyebrow">{t("group_learn")}</span>
-          {link("/", LayoutGrid, t("nav_overview"), { end: true })}
-          {link("/subjects", Library, t("nav_subjects"), { active: learnActive })}
-          {link("/helpdesk", Building2, t("nav_helpdesk"))}
+          {link("/", LayoutGrid, t("nav_overview"), "var(--c-teal)", { end: true })}
+          {link("/subjects", Library, t("nav_subjects"), "var(--c-indigo)", { active: learnActive })}
+          {link("/helpdesk", Building2, t("nav_helpdesk"), "var(--c-plum)")}
         </div>
         <div className="nav-group">
           <span className="eyebrow">{t("group_practice")}</span>
-          {link("/assessments", ClipboardCheck, t("nav_quiz"))}
-          {link("/notes", BookOpen, t("nav_library"))}
-        </div>
-        <div className="nav-group">
-          <span className="eyebrow">{t("group_account")}</span>
-          {link("/progress", TrendingUp, t("nav_progress"))}
+          {link("/assessments", ClipboardCheck, t("nav_quiz"), "var(--c-coral)")}
+          {link("/notes", BookOpen, t("nav_library"), "var(--c-saffron)")}
+          {link("/translate", Languages, t("nav_translate"), "var(--c-leaf)")}
         </div>
         {user?.role === "teacher" && (
           <div className="nav-group">
             <span className="eyebrow">{t("group_admin")}</span>
-            {link("/teacher", ShieldCheck, t("nav_teacher"))}
+            {link("/teacher", ShieldCheck, t("nav_teacher"), "var(--c-teal)")}
           </div>
         )}
       </nav>
@@ -74,13 +70,6 @@ function Sidebar({ open, onNavigate, onAccount }) {
             {app.languages.map((l) => <option key={l.code} value={l.code}>{l.native}{l.code !== "en" ? ` (${l.name})` : ""}</option>)}
           </select>
         </div>
-        <button type="button" className="user-card" onClick={onAccount}>
-          <span className="avatar" aria-hidden="true">{registered ? user.name.trim().charAt(0).toUpperCase() : "G"}</span>
-          <span className="user-meta">
-            <strong>{registered ? user.name : t("guest")}</strong>
-            <span>{user ? `${t("level")} ${user.level} · ${formatNumber(user.xp)} XP` : t("sign_in")}</span>
-          </span>
-        </button>
       </div>
     </aside>
   );
@@ -89,6 +78,7 @@ function Sidebar({ open, onNavigate, onAccount }) {
 export default function Shell() {
   const { t, app, online } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
   const [crumbs, setCrumbsState] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState(null); // { name, tab }
@@ -96,7 +86,6 @@ export default function Shell() {
   const setCrumbs = useCallback((next) => setCrumbsState(next), []);
   const openAccount = useCallback((tab) => setDialog({ name: "account", tab }), []);
   const openFeedback = useCallback(() => setDialog({ name: "feedback" }), []);
-  const openTranslate = useCallback(() => setDialog({ name: "translate" }), []);
   const closeDialog = useCallback(() => setDialog(null), []);
 
   useEffect(() => {
@@ -108,20 +97,20 @@ export default function Shell() {
     const onKey = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        openTranslate();
+        navigate("/translate");
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [openTranslate]);
+  }, [navigate]);
 
   const fullBleed = location.pathname.startsWith("/learn") || location.pathname.startsWith("/helpdesk");
 
   return (
-    <ShellContext.Provider value={{ setCrumbs, openAccount, openFeedback, openTranslate }}>
+    <ShellContext.Provider value={{ setCrumbs, openAccount, openFeedback }}>
       <a className="skip-link" href="#main">Skip to content</a>
       <div className="shell">
-        <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} onAccount={() => { setMenuOpen(false); openAccount(); }} />
+        <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
         {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
         <div className="main-column">
           <header className="topbar">
@@ -144,24 +133,21 @@ export default function Shell() {
                 <span className="dot" aria-hidden="true" />
                 <span className="label">{app.ai_enabled ? t("ai_online") : t("ai_offline")}</span>
               </span>
-              <button className="icon-btn bordered" type="button" onClick={openTranslate} aria-label={`${t("translate")} (Ctrl+K)`} title={`${t("translate")} (Ctrl+K)`}>
-                <Languages size={16} />
-              </button>
-              <button className="icon-btn bordered" type="button" onClick={openFeedback} aria-label={t("feedback")} title={t("feedback")}>
-                <MessageSquareText size={16} />
-              </button>
+              <ProfileMenu onAccount={openAccount} onFeedback={openFeedback} />
             </div>
           </header>
           {!online && <div className="offline-bar" role="status">{t("offline")}</div>}
           <main id="main" tabIndex={-1} className={fullBleed ? "" : "page"}>
-            <Outlet />
+            <div className={fullBleed ? "" : "page-enter"} key={fullBleed ? "chat" : location.pathname}>
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>
       <AccountDialog open={dialog?.name === "account"} initialTab={dialog?.tab} onClose={closeDialog} />
       <FeedbackDialog open={dialog?.name === "feedback"} onClose={closeDialog} />
-      <TranslateDialog open={dialog?.name === "translate"} onClose={closeDialog} />
       <Toasts />
+      <Celebration />
     </ShellContext.Provider>
   );
 }

@@ -52,8 +52,8 @@ def test_conversations_are_private(app, client):
     conversation_id = ask(client, "What is a fraction?")[0]["conversation_id"]
     other = app.test_client()
     assert other.get(f"/api/conversations/{conversation_id}").status_code == 404
-    assert other.delete(f"/api/conversations/{conversation_id}", json={}).status_code == 404
-    assert client.delete(f"/api/conversations/{conversation_id}", json={}).status_code == 200
+    assert other.delete(f"/api/conversations/{conversation_id}").status_code == 404
+    assert client.delete(f"/api/conversations/{conversation_id}").status_code == 200
     assert client.get("/api/conversations").get_json()["conversations"] == []
 
 

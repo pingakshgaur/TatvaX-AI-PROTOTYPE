@@ -1,10 +1,12 @@
 """Answer a student's question: an NVIDIA-hosted model grounded in the content library when available,
 otherwise the offline library search engine. Produces a stream of event dicts."""
 
+import json
 import logging
+import re
 from collections.abc import Iterator
 
-from . import gamification, knowledge, languages
+from . import followups, gamification, knowledge, languages
 from .ai import AIService, AIUnavailable
 from .db import now_iso
 from .knowledge import library_index
@@ -94,7 +96,7 @@ class Tutor:
 
     def build_system(self, mode: str, docs: list[dict]) -> tuple[str, bool]:
         """The system prompt, with the notes inlined when they're small enough. Returns (prompt, notes_inlined)."""
-        prompt = HELPDESK_PROMPT if mode == "helpdesk" else TUTOR_PROMPT
+        prompt = (HELPDESK_PROMPT if mode == "helpdesk" else TUTOR_PROMPT) + followups.INSTRUCTION
         notes = "\n\n".join(
             f'<notes title="{d["title"]}">\n{d["body"].strip()}\n</notes>' for d in docs
         )
@@ -141,6 +143,31 @@ class Tutor:
             except TranslationError:
                 answer += "\n\n_(Translation is unavailable right now, so this answer is in English.)_"
         return answer, sources
+
+    @staticmethod
+    def _asked(conn, conversation_id: int):
+        return conn.execute(
+            "SELECT content FROM messages WHERE conversation_id = ? AND role = 'user' ORDER BY id", (conversation_id,)
+        ).fetchall()
+
+    def note_suggestions(self, conn, question: str, mode: str, docs: list[dict], language: str, asked: list[str]) -> list[str]:
+        """Follow-up ideas from neighbouring topics in the notes, translated for the student."""
+        query = question
+        if languages.detect_language(question) != "en":
+            try:
+                query, _ = self.translator.translate(question, "en")
+            except TranslationError:
+                pass
+        suggestions = followups.from_notes(conn, query, [d["slug"] for d in docs], mode, asked)
+        if suggestions and language != "en":
+            try:
+                translated, _ = self.translator.translate("\n".join(suggestions), language, "en")
+                lines = [line.strip() for line in translated.split("\n") if line.strip()]
+                if len(lines) == len(suggestions):
+                    suggestions = lines
+            except TranslationError:
+                pass
+        return suggestions
 
     @staticmethod
     def load_history(conn, conversation_id: int) -> list[dict]:
@@ -191,19 +218,27 @@ class Tutor:
             api_question += self.retrieved_notes(conn, question, docs)
         api_question += question
 
-        text, engine, sources = "", "library", []
+        text, engine, sources, suggestions = "", "library", [], []
+        asked = [m["content"] for m in self._asked(conn, conversation_id)] + [question]
         ai_attempted = self.ai.available
         if ai_attempted:
             try:
                 chunks = []
+                splitter = followups.FollowupSplitter()
                 for kind, value in self.ai.stream_reply(system, history + [{"role": "user", "content": api_question}]):
                     if kind == "text":
-                        chunks.append(value)
-                        yield {"type": "delta", "text": value}
-                    elif kind == "replace":
-                        chunks = [value]
-                        yield {"type": "replace", "text": value}
-                text, engine = "".join(chunks).strip(), "ai"
+                        visible = splitter.feed(value)
+                        if visible:
+                            chunks.append(visible)
+                            yield {"type": "delta", "text": visible}
+                rest, block = splitter.finish()
+                if rest:
+                    chunks.append(rest)
+                    yield {"type": "delta", "text": rest}
+                # Drop a stray closing divider some models write before the follow-up marker.
+                text = re.sub(r"\n\s*(?:-{3,}|\*{3,})\s*$", "", "".join(chunks).strip()).strip()
+                engine = "ai"
+                suggestions = followups.parse(block, asked)
             except AIUnavailable as exc:
                 log.warning("Falling back to library answer: %s", exc)
                 text = ""
@@ -212,14 +247,17 @@ class Tutor:
             if ai_attempted:
                 text += "\n\n_(The AI tutor is unavailable right now, so this answer comes from the study notes.)_"
             yield {"type": "replace", "text": text}
+        if len(suggestions) < 2:
+            suggestions = self.note_suggestions(conn, question, mode, docs, language, asked)
 
         conn.execute(
             "INSERT INTO messages (conversation_id, role, content, api_content, language, created_at) VALUES (?, 'user', ?, ?, ?, ?)",
             (conversation_id, question, api_question if engine == "ai" else None, language, now_iso()),
         )
         cur = conn.execute(
-            "INSERT INTO messages (conversation_id, role, content, language, engine, created_at) VALUES (?, 'assistant', ?, ?, ?, ?)",
-            (conversation_id, text, language, engine, now_iso()),
+            """INSERT INTO messages (conversation_id, role, content, language, engine, suggestions, created_at)
+               VALUES (?, 'assistant', ?, ?, ?, ?, ?)""",
+            (conversation_id, text, language, engine, json.dumps(suggestions, ensure_ascii=False), now_iso()),
         )
         conn.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now_iso(), conversation_id))
         reward = gamification.record_question(conn, user["id"], mode, scope if scope != "all" else None, language)
@@ -231,6 +269,9 @@ class Tutor:
             "message_id": cur.lastrowid,
             "engine": engine,
             "sources": sources,
+            "suggestions": suggestions,
+            "level_up": reward["level_up"],
+            "goal": reward["goal"],
             "xp_gained": reward["xp"],
             "badges": reward["badges"],
             "progress": gamification.level_info(xp_total),

@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useApp } from "../context/AppContext.jsx";
 import { renderInline, renderMarkdown } from "../lib/markdown.js";
@@ -116,4 +116,27 @@ export function Meter({ value, label }) {
       <span style={{ width: `${pct}%` }} />
     </div>
   );
+}
+
+// Animates a number from its previous value to the new one.
+export function CountUp({ value, duration = 900 }) {
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const target = Number(value) || 0;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setShown(target); from.current = target; return undefined; }
+    let frame;
+    const start = performance.now();
+    const begin = from.current;
+    const step = (time) => {
+      const t = Math.min(1, (time - start) / duration);
+      const next = Math.round(begin + (target - begin) * (1 - (1 - t) ** 3));
+      setShown(next);
+      if (t < 1) frame = requestAnimationFrame(step);
+      else from.current = target;
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [value, duration]);
+  return <>{new Intl.NumberFormat().format(shown)}</>;
 }

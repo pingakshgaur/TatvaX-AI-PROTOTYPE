@@ -174,3 +174,33 @@
   --sidebar-width: 248px;
   --topbar-height: 56px;
 }
+
+/*
+ * Learning palette: six bright, distinct hues used for subjects, chapters, achievements and
+ * celebrations. Tints are mixed from each hue so they adapt to light and dark themes.
+ */
+:root {
+  --c-teal: #0e9f8e;
+  --c-saffron: #f2a516;
+  --c-coral: #ef5f4a;
+  --c-indigo: #4f63e0;
+  --c-leaf: #3fa34d;
+  --c-plum: #a548c7;
+  --rarity-common: #6f8f89;
+  --rarity-rare: #3b82f6;
+  --rarity-epic: #a548c7;
+  --rarity-legendary: #f2a516;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --shadow-lift: 0 10px 28px -12px rgb(21 25 30 / 0.28), 0 2px 6px -2px rgb(21 25 30 / 0.08);
+}
+
+[data-theme="dark"] {
+  --shadow-lift: 0 14px 34px -14px rgb(0 0 0 / 0.75), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --shadow-lift: 0 14px 34px -14px rgb(0 0 0 / 0.75), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  }
+}

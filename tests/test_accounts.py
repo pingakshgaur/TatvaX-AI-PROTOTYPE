@@ -96,9 +96,9 @@ def test_teacher_edits_notes_and_the_tutor_uses_them(client):
 
     assert client.put(f"/api/admin/documents/{slug}", json={"color": "red"}).status_code == 400
     assert client.put(f"/api/admin/documents/{slug}", json={"title": "CS"}).get_json()["document"]["title"] == "CS"
-    assert client.delete(f"/api/admin/documents/{slug}", json={}).status_code == 200
+    assert client.delete(f"/api/admin/documents/{slug}").status_code == 200
     # The only help desk page can't be deleted.
-    assert client.delete("/api/admin/documents/school-faq", json={}).status_code == 400
+    assert client.delete("/api/admin/documents/school-faq").status_code == 400
 
 
 def test_teacher_overview_and_students(app, client):

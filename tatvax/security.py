@@ -41,11 +41,11 @@ limiter = RateLimiter()
 def require_json_for_writes():
     """Registered as a before_request hook for /api.
 
-    Browsers can't send a cross-site request with Content-Type: application/json without a
-    CORS preflight, which this app never approves, so requiring JSON blocks CSRF."""
-    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.path.startswith("/api/"):
-        if not request.is_json:
-            return error("Requests must be sent as JSON", 415)
+    A cross-site page can only send "simple" requests without a CORS preflight: GET, HEAD and
+    POST with form-style bodies. This app never approves a preflight, so PUT/PATCH/DELETE are
+    already same-origin only, and requiring JSON on POST closes the remaining CSRF route."""
+    if request.method == "POST" and request.path.startswith("/api/") and not request.is_json:
+        return error("Requests must be sent as JSON", 415)
     return None
 
 

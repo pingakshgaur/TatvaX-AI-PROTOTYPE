@@ -1,31 +1,50 @@
-import { ArrowRight, Check, MessageSquareText, Play, RotateCcw, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft, ArrowRight, Check, CheckCheck, Clock, Flag, Flame, Layers, Lightbulb, MessageSquareText, Play,
+  RotateCcw, Shuffle, Timer, X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { Ring } from "../components/Charts.jsx";
 import { useCrumbs } from "../components/Shell.jsx";
-import { InlineMarkdown, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
+import { Dialog, InlineMarkdown, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
 import { subjectCode } from "../lib/format.js";
 
 const KEYS = ["A", "B", "C", "D"];
+const PRESETS = [5, 10, 15, 20, 30];
+const SECONDS = { easy: 45, medium: 60, hard: 90, mixed: 60 };
+const MODES = [
+  ["practice", Lightbulb, "Practice", "See the answer and an explanation after every question.", "var(--c-teal)"],
+  ["exam", Layers, "Exam", "Answer everything first, then get your score and review.", "var(--c-indigo)"],
+  ["timed", Timer, "Timed", "Exam mode against the clock. Score 80% or more for bonus XP.", "var(--c-coral)"],
+];
 
-function Setup({ initialSubject, initialTopic, onStart }) {
+const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, "0")}`;
+
+// ------------------------------------------------------------------ builder
+
+function Builder({ initialSubjects, initialTopic, onStart }) {
   const { t, app, lang } = useApp();
-  const [subject, setSubject] = useState(initialSubject);
+  const [subjects, setSubjects] = useState(initialSubjects);
   const [topic, setTopic] = useState(initialTopic);
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState(10);
   const [difficulty, setDifficulty] = useState("medium");
+  const [mode, setMode] = useState("practice");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const start = async (event) => {
-    event.preventDefault();
+  const toggle = (slug) => setSubjects((list) => (list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug]));
+  const allSelected = subjects.length === app.subjects.length;
+  const chosen = app.subjects.filter((s) => subjects.includes(s.slug));
+  const minutes = Math.max(1, Math.round((count * SECONDS[difficulty]) / 60));
+
+  const start = async () => {
     setBusy(true);
     setError("");
     try {
-      const { quiz } = await api("/api/quiz", { method: "POST", body: { subject, topic, count, difficulty, language: lang } });
+      const { quiz } = await api("/api/quiz", { method: "POST", body: { subjects, topic, count, difficulty, mode, language: lang } });
       onStart(quiz);
     } catch (err) {
       setError(err.message);
@@ -36,62 +55,124 @@ function Setup({ initialSubject, initialTopic, onStart }) {
   return (
     <>
       <PageHeader eyebrow={t("group_practice")} title={t("quiz_title")} lede={t("quiz_sub")} />
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1fr)", maxWidth: 820 }}>
-        <Panel title="Configure assessment">
-          <form onSubmit={start}>
-            <div className="field">
-              <span className="label">{t("nav_subjects")}</span>
-              <div className="option-grid" role="group" aria-label={t("nav_subjects")}>
-                {app.subjects.map((s) => (
-                  <button key={s.slug} type="button" className="option-card" aria-pressed={subject === s.slug} onClick={() => setSubject(s.slug)}>
-                    <span className="subject-code" style={{ "--subject-color": s.color, minWidth: 34, height: 34, fontSize: 11 }}>{subjectCode(s.title)}</span>
-                    {s.title}
-                  </button>
-                ))}
-              </div>
+      <div className="builder">
+        <div>
+          <section className="builder-step">
+            <div className="label"><span className="step-num">1</span> Pick your subjects
+              <button className="btn btn-ghost btn-sm" type="button" style={{ marginLeft: "auto" }}
+                onClick={() => setSubjects(allSelected ? [] : app.subjects.map((s) => s.slug))}>
+                <CheckCheck size={14} /> {allSelected ? "Clear all" : "Select all"}
+              </button>
             </div>
-            <div className="field">
-              <label className="label" htmlFor="quiz-topic">{t("topic_optional")}</label>
-              <input className="input" id="quiz-topic" dir="auto" maxLength={80} value={topic}
-                placeholder={t("topic_placeholder")} onChange={(e) => setTopic(e.target.value)} />
+            <div className="subject-pick stagger" role="group" aria-label="Subjects">
+              {app.subjects.map((s, i) => (
+                <button key={s.slug} type="button" aria-pressed={subjects.includes(s.slug)} onClick={() => toggle(s.slug)}
+                  style={{ "--tone": s.color, "--i": i }}>
+                  <span className="sp-code">{subjectCode(s.title)}</span>
+                  {s.title}
+                  <span className="sp-check" aria-hidden="true"><Check size={12} /></span>
+                </button>
+              ))}
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-              <div className="field">
-                <span className="label">{t("questions")}</span>
-                <div className="segmented" role="group" aria-label={t("questions")}>
-                  {[5, 10].map((n) => <button key={n} type="button" aria-pressed={count === n} onClick={() => setCount(n)}>{n}</button>)}
-                </div>
-              </div>
-              <div className="field">
-                <span className="label">{t("difficulty")}</span>
-                <div className="segmented" role="group" aria-label={t("difficulty")}>
-                  {["easy", "medium", "hard"].map((d) => (
-                    <button key={d} type="button" aria-pressed={difficulty === d} onClick={() => setDifficulty(d)}>{t(d)}</button>
-                  ))}
-                </div>
-              </div>
+          </section>
+
+          <section className="builder-step">
+            <label className="label" htmlFor="quiz-topic"><span className="step-num">2</span> Focus on a topic <span className="muted small">(optional)</span></label>
+            <input className="input" id="quiz-topic" dir="auto" maxLength={80} value={topic}
+              placeholder={t("topic_placeholder")} onChange={(e) => setTopic(e.target.value)} />
+          </section>
+
+          <section className="builder-step">
+            <label className="label" htmlFor="quiz-count"><span className="step-num">3</span> How many questions?</label>
+            <div className="count-control">
+              <input id="quiz-count" type="range" min={3} max={30} value={count} onChange={(e) => setCount(Number(e.target.value))} />
+              <span className="count-value" aria-live="polite">{count}</span>
             </div>
-            <p className="form-error" role="alert">{error}</p>
-            <button className="btn btn-lg" type="submit" disabled={busy || !subject}>
+            <div className="count-presets" role="group" aria-label="Quick choices">
+              {PRESETS.map((n) => <button key={n} type="button" aria-pressed={count === n} onClick={() => setCount(n)}>{n} questions</button>)}
+            </div>
+          </section>
+
+          <section className="builder-step">
+            <div className="label"><span className="step-num">4</span> {t("difficulty")}</div>
+            <div className="segmented" role="group" aria-label={t("difficulty")}>
+              {["easy", "medium", "hard", "mixed"].map((d) => (
+                <button key={d} type="button" aria-pressed={difficulty === d} onClick={() => setDifficulty(d)}>
+                  {d === "mixed" ? <><Shuffle size={13} /> Mixed</> : t(d)}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="builder-step">
+            <div className="label"><span className="step-num">5</span> Choose a mode</div>
+            <div className="mode-cards" role="group" aria-label="Mode">
+              {MODES.map(([id, Icon, name, desc, tone]) => (
+                <button key={id} type="button" aria-pressed={mode === id} onClick={() => setMode(id)} style={{ "--tone": tone }}>
+                  <span className="mc-icon"><Icon size={17} /></span>
+                  <strong>{name}</strong>
+                  <span>{desc}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside className="summary-card">
+          <Panel title="Your assessment">
+            <dl>
+              <dt>Subjects</dt><dd>{chosen.length ? chosen.map((s) => s.title).join(", ") : "None yet"}</dd>
+              <dt>Questions</dt><dd>{count}</dd>
+              <dt>Difficulty</dt><dd style={{ textTransform: "capitalize" }}>{difficulty}</dd>
+              <dt>Mode</dt><dd style={{ textTransform: "capitalize" }}>{mode}</dd>
+              <dt>{mode === "timed" ? "Time limit" : "About"}</dt><dd>{minutes} min</dd>
+              {topic.trim() && <><dt>Topic</dt><dd>{topic}</dd></>}
+            </dl>
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <button className="btn btn-lg btn-block" type="button" disabled={busy || !subjects.length} onClick={start}>
               {busy ? <><span className="spinner" aria-hidden="true" /> {t("making_quiz")}</> : <><Play size={16} /> {t("start_quiz")}</>}
             </button>
-          </form>
-        </Panel>
+            {!subjects.length && <p className="hint" style={{ marginTop: 8 }}>Pick at least one subject to begin.</p>}
+            {busy && app.ai_enabled && (
+              <p className="hint" role="status" style={{ marginTop: 10 }}>
+                The AI is writing {count} fresh questions{chosen.length > 1 ? ` across ${chosen.length} subjects` : ""}.
+                {count > 10 ? " Longer assessments can take up to a minute or two." : " This usually takes a few seconds."}
+              </p>
+            )}
+          </Panel>
+        </aside>
       </div>
     </>
   );
 }
 
-function Runner({ quiz, onFinish }) {
+// ------------------------------------------------------------------ runners
+
+function QuestionCard({ quiz, index, children }) {
+  const q = quiz.questions[index];
+  const subject = quiz.subjects.find((s) => s.slug === q.subject);
+  return (
+    <Panel>
+      {quiz.subjects.length > 1 && subject && (
+        <span className="tag" style={{ marginBottom: 12, borderColor: subject.color, color: subject.color }}>{subject.title}</span>
+      )}
+      <Markdown className="prose question-text" source={q.question} />
+      {children}
+    </Panel>
+  );
+}
+
+function PracticeRunner({ quiz, onFinish }) {
   const { t } = useApp();
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [result, setResult] = useState(null);
+  const [combo, setCombo] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const started = useRef(Date.now());
   const nextRef = useRef(null);
   const total = quiz.questions.length;
-  const question = quiz.questions[index];
 
   useEffect(() => { if (result) nextRef.current?.focus(); }, [result]);
 
@@ -99,9 +180,12 @@ function Runner({ quiz, onFinish }) {
     setBusy(true);
     setError("");
     try {
-      const res = await api(`/api/quiz/${quiz.id}/answer`, { method: "POST", body: { index, choice } });
+      const res = await api(`/api/quiz/${quiz.id}/answer`, {
+        method: "POST", body: { index, choice, duration_s: Math.round((Date.now() - started.current) / 1000) },
+      });
       setResult({ ...res, choice });
       setAnswers((list) => [...list, { ...res, choice }]);
+      setCombo((c) => (res.correct ? c + 1 : 0));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -110,21 +194,20 @@ function Runner({ quiz, onFinish }) {
   };
 
   const next = () => {
-    if (index === total - 1) onFinish(answers, result.finished);
+    if (index === total - 1) onFinish({ answers, finished: result.finished });
     else { setIndex(index + 1); setResult(null); }
   };
 
   return (
     <div className="assessment">
-      <div className="assessment-progress">
+      <div className="runner-top">
         <span className="eyebrow">{t("question_of", { n: index + 1, total })}</span>
         <Meter value={(index + (result ? 1 : 0)) / total} label="Progress" />
-        <span className="tag">{quiz.subject_title}</span>
+        {combo >= 2 && <span className="combo" key={combo}><Flame size={14} /> {combo} in a row</span>}
       </div>
-      <Panel>
-        <Markdown className="prose question-text" source={question.question} />
+      <QuestionCard quiz={quiz} index={index}>
         <div className="answer-list" role="group" aria-label="Answers">
-          {question.options.map((option, i) => {
+          {quiz.questions[index].options.map((option, i) => {
             let state = "";
             if (result) {
               if (i === result.answer_index) state = "correct";
@@ -154,18 +237,138 @@ function Runner({ quiz, onFinish }) {
             </div>
           </>
         )}
-      </Panel>
+      </QuestionCard>
     </div>
   );
 }
 
-function Results({ quiz, answers, finished, onRestart }) {
+function ExamRunner({ quiz, onFinish }) {
+  const { t } = useApp();
+  const total = quiz.questions.length;
+  const [index, setIndex] = useState(0);
+  const [choices, setChoices] = useState(() => Array(total).fill(null));
+  const [flags, setFlags] = useState(() => new Set());
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [left, setLeft] = useState(quiz.time_limit);
+  const started = useRef(Date.now());
+  const submitted = useRef(false);
+  const answered = choices.filter((c) => c !== null).length;
+
+  const submit = useCallback(async (finalChoices) => {
+    if (submitted.current) return;
+    submitted.current = true;
+    setBusy(true);
+    setConfirm(false);
+    try {
+      const finished = await api(`/api/quiz/${quiz.id}/submit`, {
+        method: "POST", body: { answers: finalChoices, duration_s: Math.round((Date.now() - started.current) / 1000) },
+      });
+      onFinish({ finished, choices: finalChoices });
+    } catch (err) {
+      submitted.current = false;
+      setError(err.message);
+      setBusy(false);
+    }
+  }, [onFinish, quiz.id]);
+
+  // Countdown for timed mode; time running out submits automatically.
+  const choicesRef = useRef(choices);
+  choicesRef.current = choices;
+  useEffect(() => {
+    if (!quiz.time_limit) return undefined;
+    const timer = setInterval(() => {
+      const remaining = quiz.time_limit - Math.floor((Date.now() - started.current) / 1000);
+      setLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        submit(choicesRef.current);
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, [quiz.time_limit, submit]);
+
+  const pick = (i) => setChoices((list) => list.map((c, j) => (j === index ? (c === i ? null : i) : c)));
+  const toggleFlag = () => setFlags((set) => {
+    const next = new Set(set);
+    if (next.has(index)) next.delete(index);
+    else next.add(index);
+    return next;
+  });
+
+  return (
+    <div className="assessment">
+      <div className="runner-top">
+        <span className="eyebrow">{t("question_of", { n: index + 1, total })}</span>
+        <Meter value={answered / total} label={`${answered} of ${total} answered`} />
+        {quiz.time_limit != null && (
+          <span className={`timer${left <= 30 ? " low" : ""}`} role="timer" aria-label={`${formatTime(left)} left`}>
+            <Clock size={14} /> {formatTime(left)}
+          </span>
+        )}
+      </div>
+      <QuestionCard quiz={quiz} index={index}>
+        <div className="answer-list" role="radiogroup" aria-label="Answers">
+          {quiz.questions[index].options.map((option, i) => (
+            <button key={i} type="button" role="radio" aria-checked={choices[index] === i}
+              className={`answer${choices[index] === i ? " chosen" : ""}`} onClick={() => pick(i)} disabled={busy}>
+              <span className="key" aria-hidden="true">{KEYS[i]}</span>
+              <InlineMarkdown source={option} />
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+          <button className="btn btn-secondary" type="button" disabled={index === 0} onClick={() => setIndex(index - 1)}><ArrowLeft size={15} /> Previous</button>
+          <button className={`btn ${flags.has(index) ? "" : "btn-ghost"}`} type="button" onClick={toggleFlag} aria-pressed={flags.has(index)}
+            style={flags.has(index) ? { background: "var(--c-saffron)", borderColor: "var(--c-saffron)", color: "#1b1405" } : undefined}>
+            <Flag size={15} /> {flags.has(index) ? "Flagged" : "Flag for review"}
+          </button>
+          <span style={{ flex: 1 }} />
+          {index < total - 1
+            ? <button className="btn" type="button" onClick={() => setIndex(index + 1)}>{t("next")} <ArrowRight size={15} /></button>
+            : <button className="btn" type="button" disabled={busy} onClick={() => (answered < total ? setConfirm(true) : submit(choices))}>
+                <CheckCheck size={15} /> Submit</button>}
+        </div>
+        <nav className="qnav" aria-label="Questions">
+          {quiz.questions.map((_, i) => (
+            <button key={i} type="button" onClick={() => setIndex(i)}
+              className={`${choices[i] !== null ? "answered" : ""}${i === index ? " current" : ""}${flags.has(i) ? " flagged" : ""}`}
+              aria-label={`Question ${i + 1}${choices[i] !== null ? ", answered" : ""}${flags.has(i) ? ", flagged" : ""}`}
+              aria-current={i === index ? "step" : undefined}>{i + 1}</button>
+          ))}
+        </nav>
+        {error && <p className="form-error" role="alert" style={{ marginTop: 12 }}>{error}</p>}
+      </QuestionCard>
+
+      <Dialog open={confirm} onClose={() => setConfirm(false)} title="Submit your assessment?">
+        <p>You've answered {answered} of {total} questions. Unanswered questions count as incorrect.</p>
+        <div className="dialog-footer">
+          <button className="btn btn-secondary" type="button" onClick={() => setConfirm(false)}>Keep working</button>
+          <button className="btn" type="button" onClick={() => submit(choices)}>Submit now</button>
+        </div>
+      </Dialog>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ results
+
+function Results({ quiz, outcome, onRestart, onRetry }) {
   const { t, celebrate } = useApp();
   const celebrated = useRef(false);
+  const [retrying, setRetrying] = useState(false);
+  const [error, setError] = useState("");
+  const { finished } = outcome;
   const total = quiz.questions.length;
-  const score = finished?.score ?? answers.filter((a) => a.correct).length;
-  const ratio = score / total;
-  const wrong = answers.map((a, i) => ({ ...a, i })).filter((a) => !a.correct);
+
+  const review = useMemo(() => {
+    if (finished?.results) return finished.results;
+    return outcome.answers.map((a) => ({ choice: a.choice, correct: a.correct, answer_index: a.answer_index, explanation: a.explanation }));
+  }, [finished, outcome.answers]);
+  const score = finished?.score ?? review.filter((r) => r.correct).length;
+  const ratio = total ? score / total : 0;
+  const wrong = review.map((r, i) => ({ ...r, i })).filter((r) => !r.correct);
   const heading = ratio === 1 ? t("great_job") : ratio >= 0.6 ? t("good_job") : t("keep_going");
 
   useEffect(() => {
@@ -175,42 +378,80 @@ function Results({ quiz, answers, finished, onRestart }) {
     }
   }, [celebrate, finished]);
 
-  const explainLink = `/learn/${quiz.subject}?q=${encodeURIComponent(
-    `I answered these assessment questions incorrectly. Please explain each one simply:\n${wrong.map((w) => `- ${quiz.questions[w.i].question}`).join("\n")}`,
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      const res = await api(`/api/quiz/${quiz.id}/retry`, { method: "POST", body: {} });
+      onRetry(res.quiz);
+    } catch (err) {
+      setError(err.message);
+      setRetrying(false);
+    }
+  };
+
+  const firstSubject = quiz.subjects[0]?.slug || "all";
+  const explainLink = `/learn/${quiz.subjects.length === 1 ? firstSubject : "all"}?q=${encodeURIComponent(
+    `I answered these questions incorrectly. Please explain each one simply:\n${wrong.map((w) => `- ${quiz.questions[w.i].question}`).join("\n")}`,
   )}`;
 
   return (
     <div className="assessment">
       <Panel>
         <div className="score-summary">
-          <Ring fraction={ratio} size={124} stroke={9} label={`${score}/${total}`} sub={`${Math.round(ratio * 100)}%`} />
+          <Ring fraction={ratio} size={128} stroke={10} label={`${score}/${total}`} sub={`${Math.round(ratio * 100)}%`} />
           <div>
             <span className="eyebrow">{t("your_score")} · {quiz.subject_title}</span>
             <h2>{heading}</h2>
-            {finished?.xp_gained > 0 && <p className="muted">{t("xp_gained", { n: finished.xp_gained })}</p>}
+            <p className="muted" style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
+              {finished?.xp_gained > 0 && <span>{t("xp_gained", { n: finished.xp_gained })}</span>}
+              {finished?.duration_s != null && <span><Clock size={13} style={{ verticalAlign: "-2px" }} /> {formatTime(finished.duration_s)}</span>}
+              <span style={{ textTransform: "capitalize" }}>{quiz.mode} mode</span>
+            </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
-              <button className="btn" type="button" onClick={onRestart}><RotateCcw size={15} /> {t("try_again")}</button>
+              {wrong.length > 0 && <button className="btn" type="button" onClick={retry} disabled={retrying}><RotateCcw size={15} /> Retry my mistakes</button>}
               {wrong.length > 0 && <Link className="btn btn-secondary" to={explainLink}><MessageSquareText size={15} /> {t("explain_mistakes")}</Link>}
-              <Link className="btn btn-ghost" to="/progress">{t("nav_progress")}</Link>
+              <button className={`btn ${wrong.length ? "btn-ghost" : ""}`} type="button" onClick={onRestart}><Play size={15} /> {t("try_again")}</button>
             </div>
+            {error && <p className="form-error">{error}</p>}
           </div>
         </div>
       </Panel>
 
+      {finished?.breakdown?.length > 1 && (
+        <div className="section">
+          <div className="section-head"><h2>By subject</h2></div>
+          <Panel>
+            <div className="subject-breakdown">
+              {finished.breakdown.map((b) => (
+                <div className="sb-row" key={b.subject}>
+                  <span>{b.subject}</span>
+                  <span className="sb-bar"><span style={{ width: `${(b.correct / b.total) * 100}%` }} /></span>
+                  <span className="num" style={{ textAlign: "right" }}>{b.correct}/{b.total}</span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+      )}
+
       <div className="section">
-        <div className="section-head"><h2>{t("review")}</h2></div>
+        <div className="section-head"><h2>{t("review")}</h2><span className="eyebrow">{wrong.length} to revisit</span></div>
         <Panel tight>
           {quiz.questions.map((q, i) => {
-            const a = answers[i];
+            const r = review[i];
+            if (!r) return null;
             return (
               <div className="list-row" key={i} style={{ alignItems: "flex-start" }}>
-                <span className={`tag ${a.correct ? "positive" : "negative"}`} style={{ marginTop: 2 }}>{a.correct ? t("correct") : t("incorrect")}</span>
+                <span className={`tag ${r.correct ? "positive" : "negative"}`} style={{ marginTop: 2 }}>
+                  {r.correct ? t("correct") : r.choice === null || r.choice === undefined ? "Skipped" : t("incorrect")}
+                </span>
                 <div className="grow">
                   <Markdown className="prose title" source={q.question} />
                   <div className="desc">
-                    {!a.correct && <>Your answer: <InlineMarkdown source={q.options[a.choice]} /> · </>}
-                    Correct answer: <strong><InlineMarkdown source={q.options[a.answer_index]} /></strong>
+                    {!r.correct && r.choice != null && <>Your answer: <InlineMarkdown source={q.options[r.choice]} /> · </>}
+                    Correct answer: <strong><InlineMarkdown source={q.options[r.answer_index]} /></strong>
                   </div>
+                  {!r.correct && r.explanation && <div className="desc" style={{ marginTop: 4 }}><InlineMarkdown source={r.explanation} /></div>}
                 </div>
               </div>
             );
@@ -221,6 +462,8 @@ function Results({ quiz, answers, finished, onRestart }) {
   );
 }
 
+// ------------------------------------------------------------------ page
+
 export default function Assessments() {
   const { t, app } = useApp();
   const params = useParams();
@@ -228,18 +471,27 @@ export default function Assessments() {
   const [quiz, setQuiz] = useState(null);
   const [outcome, setOutcome] = useState(null);
   const [run, setRun] = useState(0);
-  const initialSubject = app.subjects.some((s) => s.slug === params.slug) ? params.slug : app.subjects[0]?.slug;
+  const initialSubjects = app.subjects.some((s) => s.slug === params.slug) ? [params.slug] : app.subjects.slice(0, 1).map((s) => s.slug);
 
   useCrumbs([{ label: t("nav_quiz"), to: "/assessments" }, ...(quiz ? [{ label: quiz.subject_title }] : [])]);
-
   useEffect(() => { setQuiz(null); setOutcome(null); }, [params.slug]);
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [quiz, outcome]);
+
+  const restart = () => { setQuiz(null); setOutcome(null); setRun((n) => n + 1); };
 
   if (quiz && outcome) {
-    return <Results quiz={quiz} answers={outcome.answers} finished={outcome.finished}
-      onRestart={() => { setQuiz(null); setOutcome(null); setRun((n) => n + 1); }} />;
+    return <Results key={quiz.id} quiz={quiz} outcome={outcome} onRestart={restart} onRetry={(next) => { setOutcome(null); setQuiz(next); }} />;
   }
   if (quiz) {
-    return <Runner quiz={quiz} onFinish={(answers, finished) => setOutcome({ answers, finished })} />;
+    return (
+      <>
+        {quiz.notice && <div className="panel" style={{ marginBottom: 16, background: "var(--notice-tint)", borderColor: "transparent" }}>
+          <div className="panel-body small">{quiz.notice}</div></div>}
+        {quiz.mode === "practice"
+          ? <PracticeRunner key={quiz.id} quiz={quiz} onFinish={setOutcome} />
+          : <ExamRunner key={quiz.id} quiz={quiz} onFinish={setOutcome} />}
+      </>
+    );
   }
-  return <Setup key={`${initialSubject}-${run}`} initialSubject={initialSubject} initialTopic={searchParams.get("topic") || ""} onStart={setQuiz} />;
+  return <Builder key={`${initialSubjects.join()}-${run}`} initialSubjects={initialSubjects} initialTopic={searchParams.get("topic") || ""} onStart={setQuiz} />;
 }

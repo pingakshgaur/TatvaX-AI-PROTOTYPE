@@ -24,7 +24,7 @@ Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingaks
 | Motivation | None | XP, levels, daily streaks, 10 achievements, weekly class leaderboard |
 | Teachers | None | Teacher console: analytics, student table, content editor, feedback inbox |
 | Security | Hard-coded secret key, `debug=True` on `0.0.0.0`, feedback (with emails) saved to a public folder | Generated secret, local-only dev server, strict CSP, JSON-only writes (CSRF defence), rate limits, private feedback |
-| Tests | None | 41 backend tests |
+| Tests | None | 53 backend tests |
 
 Bugs fixed from v1 include: speech output stripped the vowel signs (matras) from every Indic sentence; good translations were thrown away whenever they contained the word "error"; word replacements turned "hardware" into "needs practiceware"; voice input crashed; the app crashed at start-up on a default Windows console.
 
@@ -38,12 +38,14 @@ From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentica
 
 **For students**
 - **Subject tutor**: mathematics, science, English and social studies, plus any subject a teacher adds. Answers stream in live with rendered maths, and the tutor adapts its explanations to the student's class.
+- **Follow-up suggestions**: after every answer, three new, clickable questions that build on it (never repeating what was already asked).
 - **School help desk**: admissions, fees, exams and rules. The help desk answers only from the school's information and never invents fees, dates or phone numbers.
-- **Assessments**: 5 or 10 questions, three difficulty levels, an optional topic, and instant explanations. One click sends the wrong answers to the tutor to explain.
-- **Study notes**: a reader with a table of contents and search, available offline once opened.
-- **Voice**: ask by speaking, and listen to any answer.
-- **Progress**: XP and levels, daily streaks, achievements, 14-day activity, and a weekly leaderboard (opt-out available).
-- **Quick translate** with <kbd>Ctrl</kbd>+<kbd>K</kbd>.
+- **Assessments**: pick several subjects at once, 3–30 questions, easy/medium/hard/mixed difficulty, and three modes: practice (instant feedback), exam (question navigator and flags, marked at the end) and timed. Results show a per-subject breakdown, and one click retries just the mistakes or sends them to the tutor to explain.
+- **Study notes**: colour-coded chapter and topic cards with example/remember/formula callouts, reading progress, "mark as read", a quiz per chapter, and search. Available offline once opened.
+- **Translator**: translate as you type between 13 languages, with language detection, voice input, read-aloud and history (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Any answer can also be translated in place.
+- **Voice**: ask by speaking (with a live microphone level), and listen to any answer.
+- **Rewards**: XP and levels, daily streaks, an adjustable daily goal, 13 achievements in four rarities with full-screen celebrations, and a weekly leaderboard (opt-out available).
+- **Profile menu**: level ring, XP, streak, achievements, rank, daily goal, theme and sound settings, all from the avatar in the top bar.
 
 **For teachers**
 - **AI settings**: paste a free NVIDIA API key, choose the model and test the connection, with no restart needed.

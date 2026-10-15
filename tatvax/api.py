@@ -126,10 +126,15 @@ def conversation(conversation_id: int):
     if convo is None:
         return error("Conversation not found", 404)
     rows = get_db().execute(
-        "SELECT id, role, content, language, engine, created_at FROM messages WHERE conversation_id = ? ORDER BY id",
+        "SELECT id, role, content, language, engine, suggestions, created_at FROM messages WHERE conversation_id = ? ORDER BY id",
         (conversation_id,),
     ).fetchall()
-    return {"conversation": dict(convo), "messages": [dict(r) for r in rows]}
+    messages = []
+    for row in rows:
+        message = dict(row)
+        message["suggestions"] = json.loads(message["suggestions"]) if message["suggestions"] else []
+        messages.append(message)
+    return {"conversation": dict(convo), "messages": messages}
 
 
 @bp.delete("/conversations/<int:conversation_id>")
@@ -150,14 +155,18 @@ def create_quiz():
     user = current_user(create=True)
     if not limiter.allow(f"quiz:{user['id']}", 6):
         return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
+    subjects = data.get("subjects")
+    if not isinstance(subjects, list):
+        subjects = [str(data.get("subject", ""))]
     try:
         quiz = services().quizmaster.create(
             get_db(), user,
-            subject=str(data.get("subject", "")),
+            subjects=[str(s) for s in subjects],
             topic=str(data.get("topic", "")),
-            count=data.get("count", 5),
+            count=data.get("count", 10),
             difficulty=str(data.get("difficulty", "medium")),
             language=languages.normalize(data.get("language")),
+            mode=str(data.get("mode", "practice")),
         )
     except QuizError as exc:
         return error(str(exc))
@@ -173,8 +182,35 @@ def answer_quiz(quiz_id: int):
     index, choice = data.get("index"), data.get("choice")
     if not isinstance(index, int) or not isinstance(choice, int):
         return error("Invalid answer")
+    duration = data.get("duration_s")
     try:
-        return services().quizmaster.answer(get_db(), user, quiz_id, index, choice)
+        return services().quizmaster.answer(get_db(), user, quiz_id, index, choice,
+                                            duration if isinstance(duration, int) else None)
+    except QuizError as exc:
+        return error(str(exc), 404 if "not found" in str(exc) else 400)
+
+
+@bp.post("/quiz/<int:quiz_id>/submit")
+def submit_quiz(quiz_id: int):
+    data = request.get_json(silent=True) or {}
+    user = current_user()
+    if user is None:
+        return error("Quiz not found", 404)
+    duration = data.get("duration_s")
+    try:
+        return services().quizmaster.submit(get_db(), user, quiz_id, data.get("answers"),
+                                            duration if isinstance(duration, int) else None)
+    except QuizError as exc:
+        return error(str(exc), 404 if "not found" in str(exc) else 400)
+
+
+@bp.post("/quiz/<int:quiz_id>/retry")
+def retry_quiz(quiz_id: int):
+    user = current_user()
+    if user is None:
+        return error("Quiz not found", 404)
+    try:
+        return {"quiz": services().quizmaster.retry_mistakes(get_db(), user, quiz_id)}, 201
     except QuizError as exc:
         return error(str(exc), 404 if "not found" in str(exc) else 400)
 
@@ -238,13 +274,13 @@ def translate():
     if not limiter.allow(f"translate:{user['id']}", 20):
         return error("Too many translations. Please wait a minute.", 429)
     source = data.get("source", "auto")
-    if source != "auto":
-        source = languages.normalize(source)
+    source = languages.detect_language(text) if source == "auto" else languages.normalize(source)
+    target = languages.normalize(data.get("target"))
     try:
-        translated, engine = services().translator.translate(text, languages.normalize(data.get("target")), source)
+        translated, engine = services().translator.translate(text, target, source)
     except TranslationError:
         return error("Translation is unavailable right now. Please try again later.", 503)
-    return {"text": translated, "engine": engine}
+    return {"text": translated, "engine": engine, "source": source, "target": target}
 
 
 @bp.post("/tts")

@@ -26,6 +26,10 @@ export function AppProvider({ children }) {
   const [bootError, setBootError] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [online, setOnline] = useState(navigator.onLine);
+  const [celebrations, setCelebrations] = useState([]);
+  const [xpPop, setXpPop] = useState(null);
+  const [sound, setSoundState] = useState(() => readStorage("tatvax.sound") !== "off");
+  const [progressVersion, setProgressVersion] = useState(0);
   const toastId = useRef(0);
 
   const boot = useCallback(async () => {
@@ -89,20 +93,34 @@ export function AppProvider({ children }) {
     if (fresh) setUserState(fresh);
   }, []);
 
+  // Rewards from a question or assessment: a quick XP pop, then full-screen celebrations for
+  // each achievement, a level-up and a completed daily goal, shown one after another.
   const celebrate = useCallback((reward) => {
     if (!reward) return;
-    const beforeLevel = user?.level;
-    if (reward.xp_gained > 0) notify(t("xp_gained", { n: reward.xp_gained }), { kind: "success" });
-    (reward.badges || []).forEach((badge) =>
-      notify(t("badge_earned"), { detail: `${badge.name}: ${badge.description}`, duration: 5200 }));
+    if (reward.xp_gained > 0) {
+      const id = ++toastId.current;
+      setXpPop({ id, amount: reward.xp_gained });
+      setTimeout(() => setXpPop((pop) => (pop?.id === id ? null : pop)), 1900);
+    }
+    const queue = [
+      ...(reward.badges || []).map((badge) => ({ type: "badge", badge })),
+      ...(reward.level_up ? [{ type: "level", level: reward.level_up }] : []),
+      ...(reward.goal?.reached_now ? [{ type: "goal", goal: reward.goal }] : []),
+    ].map((item) => ({ ...item, id: ++toastId.current }));
+    if (queue.length) setCelebrations((list) => [...list, ...queue]);
     if (reward.progress) {
-      if (beforeLevel && reward.progress.level > beforeLevel) {
-        notify(t("level_up", { level: reward.progress.level }), { duration: 5200 });
-      }
       if (user) setUserState((current) => (current ? { ...current, ...reward.progress } : current));
       else refreshUser();
     }
-  }, [notify, refreshUser, t, user]);
+    setProgressVersion((v) => v + 1);
+  }, [refreshUser, user]);
+
+  const dismissCelebration = useCallback(() => setCelebrations((list) => list.slice(1)), []);
+
+  const setSound = useCallback((on) => {
+    setSoundState(on);
+    writeStorage("tatvax.sound", on ? "on" : "off");
+  }, []);
 
   const reloadApp = useCallback(async () => {
     const data = await api("/api/bootstrap");
@@ -116,9 +134,10 @@ export function AppProvider({ children }) {
   );
 
   const value = useMemo(() => ({
-    app, user, lang, t, online, toasts, bootError,
-    setUser, setLang, notify, celebrate, refreshUser, reloadApp, languageInfo, retryBoot: boot,
-  }), [app, user, lang, t, online, toasts, bootError, setUser, setLang, notify, celebrate, refreshUser, reloadApp, languageInfo, boot]);
+    app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion,
+    setUser, setLang, notify, celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, retryBoot: boot,
+  }), [app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion, setUser, setLang, notify,
+    celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, boot]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

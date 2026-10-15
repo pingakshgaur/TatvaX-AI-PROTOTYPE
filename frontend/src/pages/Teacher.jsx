@@ -1,5 +1,5 @@
 import {
-  BarChart3, CheckCircle2, Cpu, ExternalLink, Eye, FilePenLine, KeyRound, Lock, MessageSquareText, PenLine, Plus, Save,
+  BarChart3, CheckCircle2, Copy, Cpu, ExternalLink, Eye, EyeOff, FilePenLine, KeyRound, Lock, MessageSquareText, PenLine, Plus, Save,
   Trash2, Users, XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -273,6 +273,21 @@ function AISettings() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [testResult, setTestResult] = useState(null);
+  const [revealed, setRevealed] = useState(null);
+
+  const reveal = async () => {
+    if (revealed) { setRevealed(null); return; }
+    try {
+      setRevealed((await api("/api/admin/ai/key")).api_key);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const copyKey = async () => {
+    const key = revealed || (await api("/api/admin/ai/key")).api_key;
+    await navigator.clipboard.writeText(key);
+    notify("API key copied");
+  };
 
   const apply = useCallback((data) => {
     setState(data);
@@ -310,6 +325,7 @@ function AISettings() {
       const data = await api("/api/admin/ai", { method: "PUT", body });
       apply(data);
       setKey("");
+      setRevealed(null);
       await reloadApp();
       notify(message, { kind: "success" });
       return data;
@@ -342,9 +358,25 @@ function AISettings() {
   return (
     <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", alignItems: "start" }}>
       <Panel title="NVIDIA AI tutor" actions={<span className={`tag ${statusKind}`}>{statusLabel}</span>}>
+        {ai.configured && (
+          <div className="key-card" style={ai.available ? undefined : { background: "var(--negative-tint)", borderColor: "var(--negative)" }}>
+            <span className="key-icon" style={ai.available ? undefined : { background: "var(--negative)" }}><KeyRound size={17} /></span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="kc-meta">{ai.source === "environment" ? "Key from the server's NVIDIA_API_KEY setting" : "Saved key"}
+                {ai.saved_at && ai.source === "settings" ? ` · saved ${timeAgo(ai.saved_at)}` : ""}</div>
+              <code>{revealed || `${ai.key_hint?.split("…")[0] ?? ""}${"•".repeat(24)}${ai.key_hint?.split("…")[1] ?? ""}`}</code>
+            </div>
+            <button className="icon-btn" type="button" onClick={reveal} aria-label={revealed ? "Hide key" : "Show key"} title={revealed ? "Hide key" : "Show key"}>
+              {revealed ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+            <button className="icon-btn" type="button" onClick={() => copyKey().catch((err) => setError(err.message))} aria-label="Copy key" title="Copy key">
+              <Copy size={16} />
+            </button>
+          </div>
+        )}
         <form onSubmit={submit} noValidate>
           <div className="field">
-            <label className="label" htmlFor="nv-key">NVIDIA API key</label>
+            <label className="label" htmlFor="nv-key">{ai.configured ? "Replace the key" : "NVIDIA API key"}</label>
             <input className="input mono" id="nv-key" type="password" autoComplete="off" spellCheck={false}
               placeholder={ai.key_hint ? `Saved: ${ai.key_hint} (enter a new key to replace it)` : "nvapi-..."}
               value={key} onChange={(e) => setKey(e.target.value)} />

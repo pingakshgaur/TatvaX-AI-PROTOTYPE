@@ -47,6 +47,7 @@ def public_user(user) -> dict | None:
         "grade": user["grade"],
         "theme": user["theme"],
         "leaderboard": bool(user["leaderboard"]),
+        "daily_goal": user["daily_goal"],
         **level_info(user["xp"]),
     }
 
@@ -114,6 +115,11 @@ def update_me():
         updates["theme"] = data["theme"]
     if "leaderboard" in data:
         updates["leaderboard"] = 1 if data["leaderboard"] else 0
+    if "daily_goal" in data:
+        goal = data["daily_goal"]
+        if not isinstance(goal, int) or not 1 <= goal <= 50:
+            return error("Daily goal must be between 1 and 50")
+        updates["daily_goal"] = goal
     if updates:
         db = get_db()
         assignments = ", ".join(f"{column} = ?" for column in updates)

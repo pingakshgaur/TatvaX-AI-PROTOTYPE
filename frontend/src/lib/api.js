@@ -53,6 +53,13 @@ export async function streamChat(body, onEvent, signal) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  // The answer is complete at the "done" (or "error") event. Stop reading there instead of waiting
+  // for the server to close the connection, which some servers and proxies hold open.
+  const handle = (line) => {
+    const event = JSON.parse(line);
+    onEvent(event);
+    return event.type === "done" || event.type === "error";
+  };
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -61,8 +68,11 @@ export async function streamChat(body, onEvent, signal) {
     while ((newline = buffer.indexOf("\n")) >= 0) {
       const line = buffer.slice(0, newline).trim();
       buffer = buffer.slice(newline + 1);
-      if (line) onEvent(JSON.parse(line));
+      if (line && handle(line)) {
+        reader.cancel().catch(() => {});
+        return;
+      }
     }
   }
-  if (buffer.trim()) onEvent(JSON.parse(buffer));
+  if (buffer.trim()) handle(buffer.trim());
 }

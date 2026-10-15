@@ -1,9 +1,9 @@
-import { ChevronRight, ClipboardCheck, MessageSquareText, Search } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, ChevronRight, ClipboardCheck, Lightbulb, MessageSquareText, Search, Sigma, Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
-import { EmptyState, Loading, Markdown, PageHeader, Panel } from "../components/ui.jsx";
+import { EmptyState, Loading, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
 import { subjectCode } from "../lib/format.js";
@@ -84,7 +84,93 @@ export function LibraryIndex() {
   );
 }
 
-const slugify = (text) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+const CHAPTER_TONES = ["var(--c-teal)", "var(--c-indigo)", "var(--c-coral)", "var(--c-leaf)", "var(--c-plum)", "var(--c-saffron)"];
+const CALLOUTS = [
+  [/^(Examples?|Solve|Answer|To solve)\s*:/i, "example", Lightbulb],
+  [/^(Remember|Note|Important|Tip)\s*:/i, "note", Star],
+  [/^(Symbol|Formula|Formulas)\s*:/i, "formula", Sigma],
+];
+
+// Split a document into chapters ("## ...") and topics ("### ..." or a "**Topic**" line).
+function parseNotes(body) {
+  const chapters = [];
+  let chapter = null;
+  let topic = null;
+  const startChapter = (title) => {
+    const match = title.match(/^Chapter\s+(\d+)\s*[:.-]\s*(.*)$/i);
+    chapter = { number: match ? match[1] : String(chapters.length + 1), title: match ? match[2] : title, intro: [], topics: [] };
+    chapters.push(chapter);
+    topic = null;
+  };
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const heading = line.match(/^#{1,2}\s+(.*)/);
+    const sub = line.match(/^#{3,4}\s+(.*)/) || line.trim().match(/^\*\*([^*]{2,80})\*\*:?$/);
+    if (heading) { startChapter(heading[1].trim()); continue; }
+    if (!chapter) startChapter("Introduction");
+    if (sub) {
+      topic = { title: sub[1].trim().replace(/:$/, ""), lines: [] };
+      chapter.topics.push(topic);
+      continue;
+    }
+    (topic ? topic.lines : chapter.intro).push(line);
+  }
+  return chapters.filter((c) => c.topics.length || c.intro.join("").trim());
+}
+
+// Group a topic's lines into plain Markdown and coloured callouts.
+function segments(lines) {
+  const out = [];
+  let current = null;
+  for (const line of lines) {
+    const callout = CALLOUTS.find(([pattern]) => pattern.test(line.trim()));
+    if (callout) {
+      current = { kind: callout[1], icon: callout[2], lines: [line.trim()] };
+      out.push(current);
+    } else if (current && current.kind !== "md" && line.trim() && !/^\*\*/.test(line.trim())
+      // A callout continues with list items and short labelled lines ("Positive integers: 1, 2, 3").
+      && (/^\s*([-*•]|\d+[.)])\s/.test(line) || /^[^.:]{2,32}:/.test(line.trim()))) {
+      current.lines.push(line);
+    } else {
+      if (!current || current.kind !== "md") {
+        current = { kind: "md", lines: [] };
+        out.push(current);
+      }
+      current.lines.push(line);
+    }
+    if (!line.trim() && current && current.kind !== "md") current = null;
+  }
+  return out.filter((s) => s.lines.join("").trim());
+}
+
+function readKey(slug) { return `tatvax.read.${slug}`; }
+
+function loadRead(slug) {
+  try { return new Set(JSON.parse(localStorage.getItem(readKey(slug)) || "[]")); } catch { return new Set(); }
+}
+
+function Topic({ topic, docSlug, kind }) {
+  const { t } = useApp();
+  const askHref = kind === "helpdesk"
+    ? `/helpdesk?q=${encodeURIComponent(`Tell me about ${topic.title}`)}`
+    : `/learn/${docSlug}?q=${encodeURIComponent(`Explain ${topic.title} with an example`)}`;
+  return (
+    <div className="topic-card" data-topic={topic.title.toLowerCase()}>
+      <h3>{topic.title}
+        <Link className="btn btn-ghost btn-sm ask-topic" to={askHref}><MessageSquareText size={13} /> {t("ask_about")}</Link>
+      </h3>
+      {segments(topic.lines).map((seg, i) => {
+        if (seg.kind === "md") return <Markdown key={i} source={seg.lines.join("\n")} />;
+        const Icon = seg.icon;
+        return (
+          <div key={i} className={`callout ${seg.kind}`}>
+            <Icon size={16} aria-hidden="true" />
+            <Markdown source={seg.lines.join("\n")} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function LibraryDocument() {
   const { t } = useApp();
@@ -92,51 +178,73 @@ export function LibraryDocument() {
   const [searchParams] = useSearchParams();
   const [doc, setDoc] = useState(null);
   const [error, setError] = useState("");
-  const [toc, setToc] = useState([]);
   const [active, setActive] = useState("");
-  const readerRef = useRef(null);
+  const [read, setRead] = useState(() => loadRead(slug));
+  const [scrolled, setScrolled] = useState(0);
+  const notesRef = useRef(null);
 
   useCrumbs([{ label: t("nav_library"), to: "/notes" }, { label: doc?.title || "…" }]);
 
   useEffect(() => {
     setDoc(null);
     setError("");
+    setRead(loadRead(slug));
     api(`/api/library/${encodeURIComponent(slug)}`).then((res) => setDoc(res.document)).catch((err) => setError(err.message));
   }, [slug]);
 
-  // Build the table of contents from the rendered chapter headings.
-  useEffect(() => {
-    const reader = readerRef.current;
-    if (!doc || !reader) return undefined;
-    const headings = [...reader.querySelectorAll("h2")];
-    headings.forEach((h) => { h.id = `sec-${slugify(h.textContent)}`; });
-    setToc(headings.map((h) => ({ id: h.id, label: h.textContent })));
+  const chapters = useMemo(() => (doc ? parseNotes(doc.body) : []), [doc]);
 
+  // Reading progress bar.
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setScrolled(max > 0 ? Math.min(1, window.scrollY / max) : 0);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [chapters]);
+
+  // Highlight the current chapter in the contents, and jump to a searched topic.
+  useEffect(() => {
+    const root = notesRef.current;
+    if (!root || !chapters.length) return undefined;
+    const sections = [...root.querySelectorAll(".chapter")];
     const observer = new IntersectionObserver((entries) => {
       const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
       if (visible[0]) setActive(visible[0].target.id);
-    }, { rootMargin: "-80px 0px -70% 0px" });
-    headings.forEach((h) => observer.observe(h));
+    }, { rootMargin: "-80px 0px -65% 0px" });
+    sections.forEach((s) => observer.observe(s));
 
-    const highlight = searchParams.get("h")?.toLowerCase();
-    if (highlight) {
-      const target = [...reader.querySelectorAll("h2, h3, h4, strong, p")].find((el) => el.textContent.toLowerCase().includes(highlight));
-      if (target) {
-        requestAnimationFrame(() => {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-          target.classList.add("flash");
-        });
-      }
+    const wanted = searchParams.get("h")?.toLowerCase();
+    if (wanted) {
+      const target = root.querySelector(`[data-topic="${CSS.escape(wanted)}"]`)
+        || [...root.querySelectorAll(".topic-card, .chapter-head")].find((el) => el.textContent.toLowerCase().includes(wanted));
+      if (target) requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.classList.add("flash");
+      });
     }
     return () => observer.disconnect();
-  }, [doc, searchParams]);
+  }, [chapters, searchParams]);
+
+  const toggleRead = (id) => setRead((set) => {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    try { localStorage.setItem(readKey(slug), JSON.stringify([...next])); } catch { /* storage unavailable */ }
+    return next;
+  });
 
   if (error) return <EmptyState title="Notes not found" action={<Link className="btn" to="/notes">{t("library_title")}</Link>}>{error}</EmptyState>;
   if (!doc) return <Loading />;
 
   const tutorLink = doc.kind === "helpdesk" ? "/helpdesk" : `/learn/${doc.slug}`;
+  const readCount = chapters.filter((c, i) => read.has(`ch-${i}`)).length;
+
   return (
     <>
+      <div className="reading-progress" aria-hidden="true"><span style={{ width: `${scrolled * 100}%` }} /></div>
       <PageHeader eyebrow={doc.kind === "helpdesk" ? "School information" : "Subject notes"} title={doc.title} lede={doc.description}
         actions={<>
           <Link className="btn" to={tutorLink}><MessageSquareText size={15} /> {t("ask_about")}</Link>
@@ -144,17 +252,50 @@ export function LibraryDocument() {
         </>} />
       <div className="reader-layout">
         <nav className="toc" aria-label={t("contents")}>
-          <span className="eyebrow" style={{ display: "block", padding: "0 10px 8px" }}>{t("contents")}</span>
-          {toc.map((item) => (
-            <a key={item.id} href={`#${item.id}`} className={active === item.id ? "active" : ""}
-              onClick={(e) => { e.preventDefault(); document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" }); }}>
-              {item.label}
+          <span className="eyebrow" style={{ display: "block", padding: "0 10px 8px" }}>{t("contents")} · {readCount}/{chapters.length} read</span>
+          <div className="read-meter"><Meter value={chapters.length ? readCount / chapters.length : 0} label="Chapters read" /></div>
+          {chapters.map((c, i) => (
+            <a key={i} href={`#ch-${i}`} className={`${active === `ch-${i}` ? "active" : ""}${read.has(`ch-${i}`) ? " read" : ""}`}
+              style={{ "--tone": CHAPTER_TONES[i % CHAPTER_TONES.length] }}
+              onClick={(e) => { e.preventDefault(); document.getElementById(`ch-${i}`)?.scrollIntoView({ behavior: "smooth" }); }}>
+              <span className="toc-dot" aria-hidden="true" />{c.title}
+              {read.has(`ch-${i}`) && <CheckCircle2 className="toc-check" size={14} aria-label="Read" />}
             </a>
           ))}
         </nav>
         <div>
           <NotesSearch subject={doc.slug} />
-          <Panel><div ref={readerRef}><Markdown className="prose reader" source={doc.body} /></div></Panel>
+          <div className="notes stagger" ref={notesRef}>
+            {chapters.map((chapter, i) => {
+              const id = `ch-${i}`;
+              const done = read.has(id);
+              return (
+                <section key={id} id={id} className="chapter" style={{ "--tone": CHAPTER_TONES[i % CHAPTER_TONES.length], "--i": Math.min(i, 6) }}>
+                  <header className="chapter-head">
+                    <span className="chapter-num" aria-hidden="true">{chapter.number}</span>
+                    <div>
+                      <span className="eyebrow">Chapter {chapter.number} · {chapter.topics.length} topics</span>
+                      <h2>{chapter.title}</h2>
+                    </div>
+                    <div className="ch-actions">
+                      {doc.kind === "subject" && (
+                        <Link className="btn btn-sm" to={`/assessments/${doc.slug}?topic=${encodeURIComponent(chapter.title)}`}>
+                          <ClipboardCheck size={14} /> <span>Quiz me</span>
+                        </Link>
+                      )}
+                      <button className={`btn btn-sm${done ? " done" : ""}`} type="button" aria-pressed={done} onClick={() => toggleRead(id)}>
+                        <CheckCircle2 size={14} /> <span>{done ? "Read" : "Mark as read"}</span>
+                      </button>
+                    </div>
+                  </header>
+                  <div className="chapter-body">
+                    {chapter.intro.join("\n").trim() && <Markdown source={chapter.intro.join("\n")} />}
+                    {chapter.topics.map((topic, j) => <Topic key={j} topic={topic} docSlug={doc.slug} kind={doc.kind} />)}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </div>
       </div>
     </>
