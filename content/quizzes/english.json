@@ -1,0 +1,184 @@
+[
+ {
+  "topic": "nouns parts of speech",
+  "difficulty": "easy",
+  "question": "In 'The dog barked loudly', which word is a noun?",
+  "options": [
+   "barked",
+   "loudly",
+   "dog",
+   "The"
+  ],
+  "answer_index": 2,
+  "explanation": "A noun names a person, place, animal or thing. 'Dog' is an animal."
+ },
+ {
+  "topic": "adjectives parts of speech",
+  "difficulty": "easy",
+  "question": "Which word is an adjective in 'She wore a beautiful saree'?",
+  "options": [
+   "She",
+   "wore",
+   "beautiful",
+   "saree"
+  ],
+  "answer_index": 2,
+  "explanation": "An adjective describes a noun. 'Beautiful' describes the saree."
+ },
+ {
+  "topic": "adverbs parts of speech",
+  "difficulty": "medium",
+  "question": "In 'He ran quickly', what part of speech is 'quickly'?",
+  "options": [
+   "Adjective",
+   "Adverb",
+   "Verb",
+   "Pronoun"
+  ],
+  "answer_index": 1,
+  "explanation": "Adverbs describe verbs. 'Quickly' tells us how he ran."
+ },
+ {
+  "topic": "conjunctions parts of speech",
+  "difficulty": "medium",
+  "question": "Which word is a conjunction?",
+  "options": [
+   "and",
+   "under",
+   "wow",
+   "they"
+  ],
+  "answer_index": 0,
+  "explanation": "Conjunctions join words or sentences: and, but, or, because."
+ },
+ {
+  "topic": "sentences imperative",
+  "difficulty": "easy",
+  "question": "'Close the door.' is which type of sentence?",
+  "options": [
+   "Declarative",
+   "Interrogative",
+   "Imperative",
+   "Exclamatory"
+  ],
+  "answer_index": 2,
+  "explanation": "An imperative sentence gives a command or makes a request."
+ },
+ {
+  "topic": "sentences compound",
+  "difficulty": "medium",
+  "question": "'I wanted to play, but it was raining.' is a…",
+  "options": [
+   "Simple sentence",
+   "Compound sentence",
+   "Complex sentence",
+   "Question"
+  ],
+  "answer_index": 1,
+  "explanation": "Two independent clauses joined by 'but' make a compound sentence."
+ },
+ {
+  "topic": "tenses present perfect",
+  "difficulty": "medium",
+  "question": "'She has finished her homework.' is in which tense?",
+  "options": [
+   "Simple past",
+   "Present perfect",
+   "Past perfect",
+   "Simple present"
+  ],
+  "answer_index": 1,
+  "explanation": "'Has/have + past participle' forms the present perfect tense."
+ },
+ {
+  "topic": "tenses past continuous",
+  "difficulty": "hard",
+  "question": "Choose the sentence in the past continuous tense.",
+  "options": [
+   "They play cricket.",
+   "They were playing cricket.",
+   "They have played cricket.",
+   "They will play cricket."
+  ],
+  "answer_index": 1,
+  "explanation": "Past continuous uses 'was/were + verb-ing'."
+ },
+ {
+  "topic": "punctuation",
+  "difficulty": "easy",
+  "question": "Which punctuation mark ends a question?",
+  "options": [
+   "Full stop",
+   "Comma",
+   "Question mark",
+   "Colon"
+  ],
+  "answer_index": 2,
+  "explanation": "Every direct question ends with a question mark (?)."
+ },
+ {
+  "topic": "punctuation apostrophe",
+  "difficulty": "medium",
+  "question": "Which phrase uses the apostrophe correctly?",
+  "options": [
+   "The boys's bags",
+   "Ravi's book",
+   "Its' tail",
+   "The cat's are sleeping"
+  ],
+  "answer_index": 1,
+  "explanation": "An apostrophe + s shows possession: Ravi's book is the book that belongs to Ravi."
+ },
+ {
+  "topic": "vocabulary synonyms",
+  "difficulty": "easy",
+  "question": "What is a synonym of 'happy'?",
+  "options": [
+   "Sad",
+   "Joyful",
+   "Angry",
+   "Tired"
+  ],
+  "answer_index": 1,
+  "explanation": "Synonyms have similar meanings. 'Joyful' means happy."
+ },
+ {
+  "topic": "vocabulary antonyms",
+  "difficulty": "medium",
+  "question": "What is the antonym of 'ancient'?",
+  "options": [
+   "Old",
+   "Historic",
+   "Modern",
+   "Large"
+  ],
+  "answer_index": 2,
+  "explanation": "Antonyms are opposites. The opposite of ancient is modern."
+ },
+ {
+  "topic": "vocabulary homophones",
+  "difficulty": "medium",
+  "question": "Which pair are homophones?",
+  "options": [
+   "big – large",
+   "their – there",
+   "run – ran",
+   "hot – cold"
+  ],
+  "answer_index": 1,
+  "explanation": "Homophones sound the same but have different meanings and spellings."
+ },
+ {
+  "topic": "writing process",
+  "difficulty": "medium",
+  "question": "Which is the correct order of the writing process?",
+  "options": [
+   "Drafting, prewriting, editing",
+   "Prewriting, drafting, revising, editing, publishing",
+   "Editing, drafting, publishing",
+   "Publishing, revising, drafting"
+  ],
+  "answer_index": 1,
+  "explanation": "Plan first, then draft, revise, edit and finally publish."
+ }
+]

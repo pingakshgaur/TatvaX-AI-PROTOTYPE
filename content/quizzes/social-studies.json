@@ -1,0 +1,184 @@
+[
+ {
+  "topic": "indus valley civilization",
+  "difficulty": "easy",
+  "question": "Which is an important site of the Indus Valley Civilization?",
+  "options": [
+   "Harappa",
+   "New Delhi",
+   "Pataliputra",
+   "Hampi"
+  ],
+  "answer_index": 0,
+  "explanation": "Harappa and Mohenjo-daro are famous Indus Valley cities."
+ },
+ {
+  "topic": "indus valley civilization",
+  "difficulty": "medium",
+  "question": "The Indus Valley people were known for…",
+  "options": [
+   "Iron weapons",
+   "Well-planned cities with drainage",
+   "Printing presses",
+   "Steam engines"
+  ],
+  "answer_index": 1,
+  "explanation": "Their cities had grid streets and covered drains, centuries ahead of their time."
+ },
+ {
+  "topic": "buddhism religions",
+  "difficulty": "medium",
+  "question": "Who founded Buddhism?",
+  "options": [
+   "Mahavira",
+   "Gautama Buddha",
+   "Ashoka",
+   "Chandragupta"
+  ],
+  "answer_index": 1,
+  "explanation": "Siddhartha Gautama became the Buddha and founded Buddhism in the 6th century BCE."
+ },
+ {
+  "topic": "mauryan empire ashoka",
+  "difficulty": "medium",
+  "question": "Which Mauryan emperor gave up war after the Kalinga war?",
+  "options": [
+   "Chandragupta Maurya",
+   "Bindusara",
+   "Ashoka",
+   "Samudragupta"
+  ],
+  "answer_index": 2,
+  "explanation": "Ashoka was so moved by the suffering at Kalinga that he embraced Buddhism and non-violence."
+ },
+ {
+  "topic": "mughal empire babur",
+  "difficulty": "medium",
+  "question": "Who founded the Mughal Empire in India in 1526?",
+  "options": [
+   "Akbar",
+   "Babur",
+   "Humayun",
+   "Shah Jahan"
+  ],
+  "answer_index": 1,
+  "explanation": "Babur won the First Battle of Panipat in 1526 and founded the Mughal Empire."
+ },
+ {
+  "topic": "mughal empire shah jahan",
+  "difficulty": "easy",
+  "question": "Which Mughal emperor built the Taj Mahal?",
+  "options": [
+   "Akbar",
+   "Aurangzeb",
+   "Shah Jahan",
+   "Babur"
+  ],
+  "answer_index": 2,
+  "explanation": "Shah Jahan built the Taj Mahal in memory of his wife Mumtaz Mahal."
+ },
+ {
+  "topic": "independence freedom struggle",
+  "difficulty": "easy",
+  "question": "In which year did India become independent?",
+  "options": [
+   "1857",
+   "1947",
+   "1950",
+   "1920"
+  ],
+  "answer_index": 1,
+  "explanation": "India gained independence on 15 August 1947."
+ },
+ {
+  "topic": "congress freedom struggle",
+  "difficulty": "medium",
+  "question": "In which year was the Indian National Congress founded?",
+  "options": [
+   "1857",
+   "1885",
+   "1906",
+   "1947"
+  ],
+  "answer_index": 1,
+  "explanation": "The Indian National Congress was founded in 1885."
+ },
+ {
+  "topic": "gandhi freedom struggle",
+  "difficulty": "medium",
+  "question": "Which movement did Gandhiji begin with the Dandi March in 1930?",
+  "options": [
+   "Quit India Movement",
+   "Salt Satyagraha (Civil Disobedience)",
+   "Non-Cooperation Movement",
+   "Swadeshi Movement"
+  ],
+  "answer_index": 1,
+  "explanation": "The Dandi March began the Salt Satyagraha, part of the Civil Disobedience Movement."
+ },
+ {
+  "topic": "himalayas geography",
+  "difficulty": "easy",
+  "question": "Which mountain range lies in the north of India?",
+  "options": [
+   "Western Ghats",
+   "Aravalli",
+   "Himalayas",
+   "Vindhyas"
+  ],
+  "answer_index": 2,
+  "explanation": "The Himalayas stretch across northern India and include the world's highest peaks."
+ },
+ {
+  "topic": "constitution civics",
+  "difficulty": "medium",
+  "question": "When did the Constitution of India come into effect?",
+  "options": [
+   "15 August 1947",
+   "26 January 1950",
+   "2 October 1948",
+   "26 November 1949"
+  ],
+  "answer_index": 1,
+  "explanation": "It came into effect on 26 January 1950, which we celebrate as Republic Day."
+ },
+ {
+  "topic": "constitution civics",
+  "difficulty": "hard",
+  "question": "Who is known as the chief architect of the Indian Constitution?",
+  "options": [
+   "Jawaharlal Nehru",
+   "Dr. B. R. Ambedkar",
+   "Sardar Patel",
+   "Rajendra Prasad"
+  ],
+  "answer_index": 1,
+  "explanation": "Dr. B. R. Ambedkar chaired the Drafting Committee of the Constitution."
+ },
+ {
+  "topic": "fundamental rights",
+  "difficulty": "medium",
+  "question": "Which of these is a Fundamental Right?",
+  "options": [
+   "Right to Equality",
+   "Right to vote at age 10",
+   "Right to a free mobile phone",
+   "Right to skip school"
+  ],
+  "answer_index": 0,
+  "explanation": "The Right to Equality is one of the Fundamental Rights in the Constitution."
+ },
+ {
+  "topic": "lok sabha parliament government",
+  "difficulty": "hard",
+  "question": "What is the normal term of the Lok Sabha?",
+  "options": [
+   "4 years",
+   "5 years",
+   "6 years",
+   "10 years"
+  ],
+  "answer_index": 1,
+  "explanation": "The Lok Sabha is elected for five years unless it is dissolved earlier."
+ }
+]

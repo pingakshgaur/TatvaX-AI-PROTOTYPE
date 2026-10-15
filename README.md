@@ -1,927 +1,214 @@
-# <ins>TatvaX AI [PROTOTYPE] - ReadMe</ins>
-TatvaX is a groundbreaking educational AI platform that democratises learning by breaking language barriers. Built with cutting-edge AI technology, TatvaX delivers personalized educational content across 8 Indian languages (Hindi, Bengali, Marathi, Telugu, Tamil, Gujarati, Kannada, and English), making quality education accessible to millions.
+# TatvaX v2
 
-<div align="center">
+**A multilingual AI tutor, assessment platform and school help desk for Indian students.**
 
-![TatvaX Banner](https://img.shields.io/badge/TatvaX-Prototype%20v1.0-blue?style=for-the-badge&logo=python)
-![Languages](https://img.shields.io/badge/Languages-8%20Supported-green?style=for-the-badge)
-![AI Powered](https://img.shields.io/badge/AI-Powered-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Prototype-yellow?style=for-the-badge)
+Students ask questions by typing or speaking in any of 13 Indian languages, get step-by-step explanations grounded in their school's own study notes, practise with assessments, and track their progress. Teachers get class analytics and edit the notes the tutor teaches from.
 
-**Breaking language barriers in education with AI**
-
-[🚀 Features](#-features) • [📥 Installation](#-installation) • [🎯 Usage](#-usage) • [🔧 Tech Stack](#-tech-stack) • [🤝 Contributing](#-contributing)
-
-</div>
+[Watch the v1 prototype in action](https://youtu.be/hqo_TAZh0ls)
 
 ---
 
-## 🎥 **Watch TatvaX in Action**
+## What's new in version 2
 
-[![Video Title](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/hqo_TAZh0ls)
+Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingakshgaur/TatvaX-AI-PROTOTYPE/tree/main).
 
----
+| Area | v1 prototype | v2 |
+|---|---|---|
+| Answers | Keyword overlap returned raw paragraphs | An **AI tutor** (open models on NVIDIA's free API) explains step by step, grounded in the school's notes, in the student's language. Without a key, a BM25 search over the notes answers instead. |
+| Languages | 8 | **13**: English, Hindi, Bengali, Marathi, Telugu, Tamil, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu |
+| Voice | Recorded from the *server's* microphone; crashed on use | Speech recognition **in the browser**; read-aloud uses the browser's voice, or server-generated audio as a fallback |
+| Content | `content_library/*.txt` was never loaded (path bug) | Notes stored in a database, editable by teachers, used instantly by the tutor |
+| Frontend | HTML/CSS/JS template | **React 18 + Vite**, custom design system, 5 themes, installable PWA with offline notes |
+| Accounts | None | Guest mode, accounts, teacher role, progress synced across devices |
+| Practice | None | **Assessments**: AI-generated (or from a built-in question bank) with explanations |
+| Motivation | None | XP, levels, daily streaks, 10 achievements, weekly class leaderboard |
+| Teachers | None | Teacher console: analytics, student table, content editor, feedback inbox |
+| Security | Hard-coded secret key, `debug=True` on `0.0.0.0`, feedback (with emails) saved to a public folder | Generated secret, local-only dev server, strict CSP, JSON-only writes (CSRF defence), rate limits, private feedback |
+| Tests | None | 41 backend tests |
 
-## ⚠️ **IMPORTANT NOTICE - PROTOTYPE VERSION**
+Bugs fixed from v1 include: speech output stripped the vowel signs (matras) from every Indic sentence; good translations were thrown away whenever they contained the word "error"; word replacements turned "hardware" into "needs practiceware"; voice input crashed; the app crashed at start-up on a default Windows console.
 
-> **This repository contains a PROTOTYPE implementation of TatvaX.**
-> 
-> This is a **proof-of-concept** demonstrating the core functionality and vision of the TatvaX platform. The final product will include enhanced features, scalability improvements, production-grade security, cloud infrastructure, and significantly expanded educational content.
->
-> **This prototype serves as:**
-> - 🎯 Demonstration of core concept and functionality
-> - 🧪 Testing ground for multilingual AI education
-> - 📊 Foundation for gathering feedback and insights
-> - 🚀 Starting point for the full-scale production version
+### Roadmap items delivered
 
----
-
-## 📖 **Table of Contents**
-
-- [About TatvaX](#-about-tatvax)
-- [Features](#-features)
-- [Why TatvaX is Revolutionary](#-why-tatvax-is-revolutionary)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [API Documentation](#-api-documentation)
-- [Project Structure](#-project-structure)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [Troubleshooting](#-troubleshooting)
-- [License](#-license)
-- [Team](#-team)
-- [Acknowledgements](#-acknowledgments)
-- [Project Stats](#-project-stats)
-- [Quick Links](#-quick-links)
+From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentication and profiles, learning progress tracking, multiple UI themes, PWA offline support, 15+ language support (13 delivered), gamification (points, badges, leaderboards), interactive quizzes and assessments, an analytics dashboard, AI tutor personalisation (by class and language), and a teacher dashboard with a content editor.
 
 ---
 
-## 🎓 **About TatvaX**
+## Features
 
-**TatvaX** is a revolutionary AI-powered educational platform that breaks language barriers to make quality education accessible to everyone. Built with a vision to democratize learning, TatvaX delivers personalized educational content in **8 Indian languages**, ensuring that language is never a barrier to knowledge.
+**For students**
+- **Subject tutor**: mathematics, science, English and social studies, plus any subject a teacher adds. Answers stream in live with rendered maths, and the tutor adapts its explanations to the student's class.
+- **School help desk**: admissions, fees, exams and rules. The help desk answers only from the school's information and never invents fees, dates or phone numbers.
+- **Assessments**: 5 or 10 questions, three difficulty levels, an optional topic, and instant explanations. One click sends the wrong answers to the tutor to explain.
+- **Study notes**: a reader with a table of contents and search, available offline once opened.
+- **Voice**: ask by speaking, and listen to any answer.
+- **Progress**: XP and levels, daily streaks, achievements, 14-day activity, and a weekly leaderboard (opt-out available).
+- **Quick translate** with <kbd>Ctrl</kbd>+<kbd>K</kbd>.
 
-### **Our Vision** 🌍
-
-To create an inclusive learning ecosystem where every student can access quality education in their native language, powered by advanced AI technology.
-
-### **Our Mission** 🎯
-
-- Make quality education accessible to all linguistic communities
-- Leverage AI to provide personalized, context-aware learning experiences
-- Bridge the digital divide with voice-first learning capabilities
-- Empower students to learn in the language they're most comfortable with
-
----
-
-## ✨ **Features**
-
-### 🎓 **Dual Learning Modes**
-
-#### **1. Subject Learning Mode**
-Interactive learning across 4 core subjects with AI-powered responses:
-- 📐 **Mathematics**: Concepts, problem-solving, formulas
-- 🔬 **Science**: Physics, Chemistry, Biology explanations
-- 📚 **English**: Grammar, literature, writing skills
-- 🌍 **Social Studies**: History, geography, civics
-
-#### **2. Institutional FAQ Mode**
-Comprehensive school information system covering:
-- 🏫 Admission procedures and requirements
-- 💰 Fee structure and payment information
-- 📅 Academic calendar and exam schedules
-- 📋 School policies and guidelines
-- 🎓 Scholarship and financial aid information
-
-### 🌐 **Multilingual AI Engine**
-
-**8 Supported Languages:**
-- 🇮🇳 **Hindi** (हिंदी)
-- 🇮🇳 **Bengali** (বাংলা)
-- 🇮🇳 **Marathi** (मराठी)
-- 🇮🇳 **Telugu** (తెలుగు)
-- 🇮🇳 **Tamil** (தமிழ்)
-- 🇮🇳 **Gujarati** (ગુજરાતી)
-- 🇮🇳 **Kannada** (ಕನ್ನಡ)
-- 🇺🇸 **English**
-
-**Smart Translation System:**
-- Multiple translation API fallback (Google Free, MyMemory, LibreTranslate)
-- Auto-detection of input language
-- Context-aware translations
-- Real-time processing
-
-### 🎙️ **Voice-First Learning**
-
-- **Voice Input**: Speak your questions in any supported language
-- **Voice Output**: Listen to responses with text-to-speech
-- **Hands-Free Learning**: Perfect for accessibility
-- **Natural Language Processing**: Understands conversational queries
-
-### 🎨 **Modern User Experience**
-
-- **Beautiful Interface**: Clean, modern design with smooth animations
-- **Responsive Design**: Works perfectly on desktop, tablet, and mobile
-- **Code Block Display**: Formatted output with copy functionality
-- **Intuitive Navigation**: Easy-to-use for all age groups
-- **Dark Mode Ready**: Easy on the eyes
-
-### 🔧 **Advanced Technical Features**
-
-- **Content Management System**: Extensive educational content library
-- **AI Response Generation**: Context-aware, intelligent responses
-- **Audio Processing**: High-quality TTS and speech recognition
-- **Fallback Systems**: Multiple API fallback for reliability
-- **Feedback System**: Built-in user feedback collection
-- **Translation Mode**: Quick translate between any languages
+**For teachers**
+- **AI settings**: paste a free NVIDIA API key, choose the model and test the connection, with no restart needed.
+- Class analytics: active learners, questions per day, subjects, languages, and average assessment scores by subject (lowest first, to show what needs revision).
+- A student table with level, XP, questions, assessments, average score and last activity.
+- A Markdown content editor with live preview. Add a subject and the tutor, search and assessments use it immediately.
+- A feedback inbox.
 
 ---
 
-## 🚀 **Why TatvaX is Revolutionary**
+## Quick start
 
-### **1. True Linguistic Inclusion** 🌍
-Unlike platforms that simply translate content, TatvaX understands cultural context and learning patterns specific to each language, making education truly accessible.
+You need **Python 3.10+** and **Node.js 18+**.
 
-### **2. Voice-First Approach** 🎙️
-TatvaX enables hands-free learning through comprehensive voice input/output, making education accessible for students with diverse learning styles and abilities.
+```bash
+git clone https://github.com/pingakshgaur/TatvaX-AI-PROTOTYPE.git
+cd TatvaX-AI-PROTOTYPE
 
-### **3. Dual-Mode Intelligence** 🧠
-Seamlessly switches between subject learning and institutional FAQs, providing a complete educational ecosystem in one platform.
-
-### **4. Robust Architecture** 🏗️
-Multi-API fallback system ensures the platform works even when primary services are down, guaranteeing consistent access to education.
-
-### **5. AI-Powered Personalisation** 🤖
-Advanced NLP algorithms provide context-aware responses tailored to each student's language and learning level.
-
-### **6. Accessibility First** ♿
-Voice input/output, clean interface, and multilingual support make TatvaX accessible to students with various needs and backgrounds.
-
----
-
-## 📥 **Installation**
-
-### **Prerequisites**
-
-- Python 3.8 or higher
-- pip (Python package manager)
-- Internet connection (for translation APIs)
-- Microphone (optional, for voice input)
-- Speakers/Headphones (optional, for audio output)
-
-### **Quick Start** ⚡
-
-1. **Clone the Repository**
-```
-git clone https://github.com/your-username/tatvax-ai-prototype.git
-cd tatvax-ai-prototype
-```
-
-2. **Create Virtual Environment**
-
-#### Windows
-```
-python -m venv venv
-venv\Scripts\activate
-```
-
-#### macOS/Linux
-```
-python3 -m venv venv
-source venv/bin/activate
-```
-
-3. **Install Dependencies**
-```
+# 1. Backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
+
+# 2. Frontend (builds once into frontend/dist, which Flask serves)
+cd frontend
+npm install
+npm run build
+cd ..
+
+# 3. Run
+python run.py
 ```
 
-4. **Download NLTK Data**
-```
-python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
-```
+Open **http://localhost:5000**. The first account you create becomes the **teacher/administrator**.
 
-5. **Run TatvaX**
-```
-python app.py
-```
+### Turning on the AI tutor (free NVIDIA key)
 
-6. **Access the Platform**
-```
-Open browser → http://localhost:5000
-```
+TatvaX's AI tutor runs on open models hosted by NVIDIA, which offers **free developer API keys**:
 
-That's it! TatvaX is now running locally. 🎉
+1. Go to [build.nvidia.com](https://build.nvidia.com) and sign in or create a free NVIDIA account.
+2. Open your profile menu and choose **API Keys**, then **Generate API Key**. The key starts with `nvapi-`.
+3. In TatvaX, sign in as the teacher and open **Teacher console > AI settings**. Paste the key, pick a model, and select **Save**. TatvaX tests the connection right away.
+
+You can also set `NVIDIA_API_KEY` in a `.env` file (see `.env.example`); a key saved in the console takes priority.
+
+| Model | Notes |
+|---|---|
+| `google/gemma-4-31b-it` (default) | Strong in Indian languages, fast |
+| `deepseek-ai/deepseek-v4.1-flash` | Very good at maths and step-by-step reasoning |
+| `moonshotai/kimi-k2.6` | Large general model with detailed answers |
+| `nvidia/nemotron-3-super-120b-a12b` | NVIDIA's general-purpose model |
+| `mistralai/mistral-large-2-instruct` | Reliable all-rounder |
+
+Any other chat model ID from build.nvidia.com can be entered too.
+
+NVIDIA's free tier is meant for prototyping and is rate limited (about 40 requests a minute). When a limit is hit, or the key is wrong, students automatically get answers from the study notes instead of an error.
+
+Without a key, TatvaX runs in **notes mode**: answers come from the study notes through search and are translated with free public translation services, and assessments come from the built-in question bank. The status indicator in the top bar shows which mode is active.
 
 ---
 
-## 🎯 **Usage**
+## Development
 
-### **Getting Started** 🚦
+Run the API and the React dev server side by side:
 
-#### **Step 1: Choose Your Mode**
-After launching TatvaX, you'll see two learning modes:
-
-- **📚 Subject Learning**: Get AI-powered help with Mathematics, Science, English, and Social Studies
-- **🏫 Institutional Assistant**: Ask questions about school policies, fees, schedules, and more
-
-#### **Step 2: Select Your Language**
-Choose from 8 supported languages in the dropdown menu. The entire interface adapts to your selection.
-
-#### **Step 3: Start Learning**
-- **Type** your question in the text box, OR
-- **Click the microphone** 🎙️ and speak your question
-- Get instant AI-powered responses in your chosen language
-- **Click audio button** 🔊 to hear the response
-
-### **Example Queries** 💬
-
-#### **Mathematics** 📐
+```bash
+python run.py                    # Flask API on :5000
+cd frontend && npm run dev       # React with hot reload on :5173 (proxies /api to :5000)
 ```
 
-"Explain Pythagoras theorem"
-"How to solve quadratic equations?"
-"What is the formula for area of circle?"
-"Teach me trigonometry basics"
+Run the tests:
 
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```
 
-#### **Science** 🔬
-```
-
-"Explain photosynthesis process"
-"What are Newton's laws of motion?"
-"How does the digestive system work?"
-"Tell me about solar system"
+### Project structure
 
 ```
-
-#### **English** 📖
+TatvaX/
+├── run.py                  # entry point (python run.py, or gunicorn run:app)
+├── tatvax/                 # Flask backend
+│   ├── __init__.py         # app factory, security headers, serves the React build
+│   ├── config.py           # settings from environment variables
+│   ├── db.py               # SQLite schema
+│   ├── ai.py               # NVIDIA API client: streaming, JSON output, error fallbacks
+│   ├── tutor.py            # answers: AI grounded in notes, or offline search
+│   ├── knowledge.py        # content library + BM25 search
+│   ├── quiz.py             # assessments (AI-generated or question bank)
+│   ├── gamification.py     # XP, levels, streaks, achievements, leaderboard
+│   ├── translation.py      # AI, then Google and MyMemory fallbacks
+│   ├── speech.py           # in-memory text-to-speech
+│   ├── languages.py        # 13 languages + script detection
+│   ├── users.py            # accounts and settings
+│   ├── api.py              # student API
+│   ├── admin.py            # teacher API
+│   └── security.py         # CSRF guard, rate limiting, roles
+├── frontend/               # React 18 + Vite
+│   ├── src/pages/          # Overview, Subjects, Chat, Assessments, Notes, Progress, Teacher
+│   ├── src/components/     # Shell, charts, dialogs, UI primitives
+│   ├── src/lib/            # API client, i18n, Markdown + KaTeX, voice
+│   ├── src/styles/         # design tokens and components
+│   └── public/             # service worker, manifest, icons
+├── content/
+│   ├── subjects/*.md       # study notes (seed the database on first run)
+│   ├── helpdesk/*.md       # school information
+│   └── quizzes/*.json      # offline question bank
+└── tests/
 ```
 
-"What are parts of speech?"
-"How to write a good essay?"
-"Explain active and passive voice"
-"Give me grammar tips"
+### Design system
 
-```
-
-#### **Social Studies** 🌍
-```
-
-"Tell me about Indian independence"
-"What is democracy?"
-"Explain fundamental rights"
-"History of Mughal empire"
-
-```
-
-#### **Institutional FAQs** 🏫
-```
-
-"What are admission requirements?"
-"When are exam dates?"
-"How much is school fee?"
-"What is school timing?"
-"How to apply for scholarship?"
-
-```
-
-### **Pro Tips** 💡
-
-✨ **Voice Input**: Works best in quiet environments  
-✨ **Language Mix**: Can understand code-switched queries  
-✨ **Quick Translate**: Press `Ctrl+K` for instant translation  
-✨ **Copy Response**: Click copy button on any response  
-✨ **Audio Speed**: Browser controls audio playback speed  
+The interface uses its own design language rather than a component kit:
+- **Type**: Source Serif 4 for display headings, IBM Plex Sans (with Plex Sans Devanagari) for the interface, and IBM Plex Mono for labels and data. All fonts are self-hosted.
+- **Colour**: ink and paper neutrals, a deep peacock teal as the primary colour, and a single turmeric accent that marks the current item.
+- **Surfaces**: flat, with hairline rules, tight 4–6 px corners and no gradients.
+- **Themes**: System, Light, Dark, Warm (low glare) and High contrast. Chart colours are validated for contrast in each theme.
 
 ---
 
-## 🔧 **Tech Stack**
+## API overview
 
-### **Frontend** 💻
-| Technology | Purpose |
-|------------|---------|
-| **HTML5** | Semantic structure |
-| **CSS3** | Modern styling with animations |
-| **JavaScript ES6+** | Interactive functionality |
-| **Responsive Design** | Mobile-first approach |
+All endpoints are under `/api`. Writes must be JSON.
 
-### **Backend** ⚙️
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Python** | 3.8+ | Core language |
-| **Flask** | 2.3+ | Web framework |
-| **NLTK** | 3.8+ | NLP processing |
-| **Sumy** | 0.11+ | Text summarization |
-
-### **AI & Translation** 🤖
-- **Google Translate API** (Primary)
-- **MyMemory API** (Fallback)
-- **LibreTranslate** (Secondary fallback)
-- **Custom NLP Engine** (Context awareness)
-
-### **Audio Processing** 🎙️
-- **gTTS**: Text-to-speech generation
-- **SpeechRecognition**: Voice input
-- **pygame**: Audio playback
-- **PyAudio**: Audio capture
-
-### **Key Dependencies** 📦
-```
-Flask==2.3.0
-nltk==3.8.1
-sumy==0.11.0
-gtts==2.3.2
-pygame==2.5.2
-SpeechRecognition==3.10.0
-PyAudio==0.2.13
-requests==2.31.0
-```
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/bootstrap` | Languages, subjects, AI status, current user |
+| POST | `/chat` | Ask a question; streams NDJSON events (`start`, `delta`, `replace`, `done`) |
+| GET/DELETE | `/conversations[/<id>]` | Session history |
+| POST | `/quiz`, `/quiz/<id>/answer` | Assessments |
+| GET | `/progress`, `/leaderboard` | Progress and gamification |
+| GET | `/library[/<slug>]`, `/search?q=` | Study notes |
+| POST | `/translate`, `/tts` | Translation and speech |
+| POST | `/auth/register`, `/auth/login`, `/auth/logout` | Accounts |
+| GET/PATCH | `/me` | Profile and settings |
+| POST | `/feedback` | Feedback |
+| GET | `/admin/overview`, `/admin/students`, `/admin/feedback` | Teacher analytics |
+| GET/POST/PUT/DELETE | `/admin/documents[/<slug>]` | Content editor |
+| GET/PUT | `/admin/ai`, POST `/admin/ai/test` | NVIDIA key, model and connection test |
 
 ---
 
-## 🏗️ **Architecture**
+## Deployment
 
-### **System Overview**
-
-```
-┌────────────────────────────────────────────────┐
-│         User Interface (HTML/CSS/JS)           │
-│   -  Responsive Design  -  Voice Controls      │
-│   -  8 Language Support -  Real-time Updates   │
-└───────────────────────┬────────────────────────┘
-                        │
-┌───────────────────────▼────────────────────────┐
-│           Flask Application Layer              │
-│   -  Routing               -  API Endpoints    │
-│   -  Session Management                        │
-└───────────────────────┬────────────────────────┘
-                        │
-           ┌────────────┼────────────┐
-           |            │            │
-     ┌─────▼─────┐ ┌────▼────┐ ┌─────▼─────┐
-     │Translation│ │Content  │ │  Chatbot  │
-     │  Service  │ │ Manager │ │  Helpers  │
-     │ Multi-API │ │ Library │ │  AI/NLP   │
-     └───────────┘ └─────────┘ └───────────┘
-           │            │            │
-           └────────────┼────────────┘
-                        │
-┌───────────────────────▼─────────────────────────┐
-│        External Services \& Resources           │
-│   -  Translation APIs    -  Audio Processing    │
-│   -  Content Database    -  Temporary Storage   │
-└─────────────────────────────────────────────────┘
-```
-
-### **Request Flow**
+The `Procfile` runs gunicorn with threads, which streaming answers need:
 
 ```
-
-User Input
-    ↓
-Language Detection
-    ↓
-Translation (if needed)
-    ↓
-Content Retrieval
-    ↓
-AI Processing
-    ↓
-Response Generation
-    ↓
-Translation to Target Language
-    ↓
-Audio Generation (optional)
-    ↓
-Response Delivery to Frontend
-
+build:  pip install -r requirements.txt && cd frontend && npm ci && npm run build
+start:  gunicorn "run:app" --worker-class gthread --threads 8 --timeout 180
 ```
 
-### **Key Components**
-
-#### **1. Translation Service** 🌍
-- Multi-API architecture with automatic fallback
-- Supports 8 languages with high accuracy
-- Caching for improved performance
-
-#### **2. Content Manager** 📚
-- Organized subject-wise content library
-- Keyword-based content retrieval
-- Institutional FAQ database
-
-#### **3. Chatbot Helpers** 🤖
-- NLP-powered query understanding
-- Context-aware response generation
-- Multi-language support
-
-#### **4. Audio Processor** 🎙️
-- Real-time speech recognition
-- High-quality text-to-speech
-- Temporary file management
+Set `TATVAX_SECRET_KEY`, `TATVAX_SECURE_COOKIES=1` (on HTTPS) and `TATVAX_BEHIND_PROXY=1` (behind a proxy), and give the server a persistent disk for `instance/`. That folder holds the SQLite database, including an NVIDIA key saved from the console, so keep it private. Rate limits are in-memory, so run a single process, or put a shared limiter in front if you scale out.
 
 ---
 
-## 📡 **API Documentation**
+## Known limitations
 
-### **Base URL**
-```
-
-http://localhost:5000/api
-
-```
-
-### **Endpoints**
-
-#### **1. Text Chat**
-```
-
-POST /api/chat/text
-Content-Type: application/json
-
-```
-
-**Request Body:**
-```
-
-{
-"message": "Your question here",
-"mode": "subjects",
-"language": "en",
-"subject": "mathematics"
-}
-
-```
-
-**Response:**
-```
-
-{
-"status": "success",
-"response": "AI generated response text",
-"audio_file": "response_12345.mp3"
-}
-
-```
-
-**Parameters:**
-| Field | Type | Required | Options |
-|-------|------|----------|---------|
-| `message` | string | ✅ | User query |
-| `mode` | string | ✅ | `subjects`, `institutional` |
-| `language` | string | ✅ | `en`, `hi`, `bn`, `mr`, `te`, `ta`, `gu`, `kn` |
-| `subject` | string | ⚠️ | Required for subjects mode |
+- Voice *input* uses the browser's Web Speech API, which works in Chrome and Edge but not Firefox. Read-aloud falls back to server-generated audio when the device has no voice for a language; Odia and Assamese only work on devices that provide their own voice.
+- The interface is fully translated into English. The other 12 languages cover the main screens and fall back to English for the rest; review by native speakers is welcome. AI answers are fully in the chosen language.
+- Notes mode translates with free public endpoints, which can be rate limited.
 
 ---
 
-#### **2. Voice Chat**
-```
+## License
 
-POST /api/chat/voice
-Content-Type: application/json
-
-```
-
-**Request Body:**
-```
-
-{
-"mode": "subjects",
-"language": "hi",
-"subject": "science"
-}
-
-```
-
-**Response:**
-```
-
-{
-"status": "success",
-"original_query": "Recognized user speech",
-"response": "AI response text",
-"audio_file": "response_67890.mp3"
-}
-
-```
-
----
-
-#### **3. Translation**
-```
-
-POST /api/translate
-Content-Type: application/json
-
-```
-
-**Request Body:**
-```
-
-{
-"text": "Text to translate",
-"source_language": "en",
-"target_language": "hi"
-}
-
-```
-
-**Response:**
-```
-
-{
-"status": "success",
-"translated_text": "अनुवादित पाठ"
-}
-
-```
-
----
-
-#### **4. System Status**
-```
-
-GET /api/status
-
-```
-
-**Response:**
-```
-
-{
-"status": "success",
-"subjects": {
-"mathematics": {...},
-"science": {...},
-"english": {...},
-"social_studies": {...}
-},
-"supported_languages": {
-"en": "English",
-"hi": "Hindi",
-...
-}
-}
-
-```
-
----
-
-#### **5. Feedback**
-```
-
-POST /api/feedback
-Content-Type: application/json
-
-```
-
-**Request Body:**
-```
-
-{
-"rating": 5,
-"name": "User Name",
-"message": "Feedback message"
-}
-
-```
-
-**Response:**
-```
-
-{
-"status": "success",
-"message": "Feedback saved successfully"
-}
-
-```
-
----
-
-## 📁 **Project Structure**
-
-```
-
-TatvaX-AI-Prototype/
-│
-├── 📄 app.py                       # Main Flask application
-├── 📄 translation_service.py       # Multi-API translation
-├── 📄 content_manager.py           # Content library manager
-├── 📄 chatbot_helpers.py           # AI/NLP processing
-├── 📄 requirements.txtt            # Python dependencies
-├── 📄 README.md                    # Documentation
-│
-├── 📂 static/
-│   ├── 📄 style.css                # UI styling
-│   ├── 📄 script.js                # Frontend logic
-│
-├── 📂 templates/
-│   └── 📄 index.html               # Main interface
-│
-├── 📂 content_library/
-│   ├── 📂 subjects/
-│   │   ├── 📄 mathematics-content.txt
-│   │   ├── 📄 science-content.txt
-│   │   ├── 📄 english-content.txt
-│   │   └── 📄 social-studies-content.txt
-│   │
-│   └── 📂 institutional/
-│       └── 📄 faq_responses.txt
-│
-└── 📂 temp_audio/                 # Temporary audio storage
-
-```
-
----
-
-## 🗺️ **Roadmap**
-
-### **✅ Current Version: Prototype v1.0**
-- 8-language multilingual support
-- Dual learning modes (Subject + Institutional)
-- Voice input/output functionality
-- Modern UI with code-block display
-- Multi-API fallback system
-- Comprehensive content library
-
-### **🎯 Upcoming: v1.5 (Q2 2025)**
-- [ ] GPT/Gemini AI integration
-- [ ] User authentication & profiles
-- [ ] Learning progress tracking
-- [ ] Multiple UI themes
-- [ ] PWA support for offline access
-- [ ] Enhanced voice recognition accuracy
-
-### **🚀 Future: v2.0 (Q4 2025)**
-- [ ] 15+ language support
-- [ ] Gamification (points, badges, leaderboards)
-- [ ] Interactive quizzes & assessments
-- [ ] Video learning modules
-- [ ] Real-time collaboration features
-- [ ] Advanced analytics dashboard
-
-### **🌟 Vision: v3.0 (2026)**
-- [ ] Native mobile apps (iOS & Android)
-- [ ] AR/VR learning experiences
-- [ ] AI tutor personalization
-- [ ] Blockchain-based certificates
-- [ ] Global content marketplace
-- [ ] Teacher dashboard & CMS
-
----
-
-## 🤝 **Contributing**
-
-We welcome contributions from developers, educators, linguists, and students!
-
-### **How to Contribute**
-
-1. **🍴 Fork** the repository
-2. **🔧 Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **💻 Commit** changes (`git commit -m 'Add amazing feature'`)
-4. **📤 Push** to branch (`git push origin feature/amazing-feature`)
-5. **🔀 Open** a Pull Request
-
-### **Contribution Areas**
-
-| Area | What We Need |
-|------|--------------|
-| 🌍 **Languages** | Add new language support, improve translations |
-| 📚 **Content** | Expand educational content, add subjects |
-| 🎨 **UI/UX** | Improve design, add themes, enhance accessibility |
-| 🤖 **AI/ML** | Enhance NLP, improve response quality |
-| 🐛 **Bug Fixes** | Report and fix bugs |
-| 📖 **Documentation** | Improve guides, add tutorials |
-| 🔧 **Features** | Implement new functionality |
-
-### **Code Style Guidelines**
-
-- **Python**: Follow PEP 8 standards
-- **JavaScript**: Use ES6+ features, follow ESLint
-- **HTML/CSS**: Semantic markup, BEM methodology
-- **Commits**: Clear, descriptive messages
-
----
-
-## 🔍 **Troubleshooting**
-
-### **Common Issues & Solutions**
-
-#### **❌ PyAudio Installation Fails**
-
-**Windows:**
-```
-
-pip install pipwin
-pipwin install pyaudio
-
-```
-
-**macOS:**
-```
-
-brew install portaudio
-pip install pyaudio
-
-```
-
-**Linux:**
-```
-
-sudo apt-get install portaudio19-dev
-pip install pyaudio
-
-```
-
----
-
-#### **❌ NLTK Data Missing**
-
-```
-
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
-
-```
-
----
-
-#### **❌ Translation Not Working**
-
-**Check:**
-- ✅ Internet connection is stable
-- ✅ No firewall blocking API requests
-- ✅ API rate limits not exceeded
-- ✅ Try different language pairs
-
-**System automatically falls back to alternate APIs**
-
----
-
-#### **❌ Voice Input Not Working**
-
-**Solutions:**
-- ✅ Use Chrome or Edge (recommended)
-- ✅ Grant microphone permissions
-- ✅ Check microphone is not in use
-- ✅ Speak clearly in quiet environment
-- ✅ Ensure microphone is properly connected
-
----
-
-#### **❌ Audio Playback Issues**
-
-**Solutions:**
-- ✅ Check speaker/headphone connection
-- ✅ Verify browser audio permissions
-- ✅ Try different browser
-- ✅ Clear `temp_audio` folder
-- ✅ Restart application
-
----
-
-#### **❌ Slow Performance**
-
-**Optimize:**
-- ✅ Check internet speed
-- ✅ Clear browser cache
-- ✅ Close unnecessary tabs/applications
-- ✅ Delete old audio files from `temp_audio/`
-- ✅ Ensure sufficient RAM available
-
----
-
-### **Getting Help** 💬
-
-**Before Creating an Issue:**
-1. Check existing [GitHub Issues](https://github.com/your-username/TatvaX-AI-Prototype/issues)
-2. Review troubleshooting section
-3. Search documentation
-
-**When Creating an Issue:**
-- Describe the problem clearly
-- Include steps to reproduce
-- Attach error messages/screenshots
-- Specify system information (OS, Python version, browser)
-
----
-
-## 📄 **License**
-
-This project is licensed under the **MIT License**.
-
-
-
-MIT License
-
-Copyright (c) 2025 Team Cortex Coders (Pingaksh Gaur)
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software...
-
-
-See [LICENSE](LICENSE) file for full details.
-
----
-
-## 👥 **Team**
-
-### **Team Cortex Coders 🧠**
-
-**Empowering education through AI innovation**
-
-**Project Lead & Developer**
-- Vision, strategy, and architecture
-- Full-stack development
-- AI/ML integration
-
-**Open for Contributors!**
-Join our mission to make education accessible to everyone.
-
-### **Contact & Community**
-- **LinkedIn**: _[@PingakshGaur](https://linkedin.com/in/pingakshgaur)_
-- **Issues**: _[Report Bug](https://github.com/your-username/TatvaX-Prototype/issues/new)_
-- **Feature Requests**: _[Request Feature](https://github.com/your-username/tatvax-ai-prototype/issues/new?labels=enhancement)_
-
----
-
-## 🙏 **Acknowledgments**
-
-Special thanks to:
-
-- **Translation APIs**: Google Translate, MyMemory, LibreTranslate
-- **Audio Libraries**: gTTS, pygame, SpeechRecognition, PyAudio
-- **NLP Tools**: NLTK, Sumy
-- **Students & Educators**: For feedback and inspiration
-
----
-
-## 📊 **Project Stats**
-
-<div align="center">
-
-![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-2.3+-green?style=flat-square&logo=flask&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow?style=flat-square&logo=javascript&logoColor=white)
-![HTML5](https://img.shields.io/badge/HTML5-Latest-orange?style=flat-square&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-Latest-blue?style=flat-square&logo=css3&logoColor=white)
-
-![Status](https://img.shields.io/badge/Status-Active-success?style=flat-square)
-![Version](https://img.shields.io/badge/Version-Prototype%20v1.0-blue?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Contributors](https://img.shields.io/badge/Contributors-Welcome-orange?style=flat-square)
-
-</div>
-
----
-
-## 🔗 **Quick Links**
-
-| Resource | Link |
-|----------|------|
-| 🚀 **Getting Started** | [Installation Guide](#-installation) |
-| 📖 **Documentation** | [Full Docs](#-api-documentation) |
-| 💬 **Report Issue** | [GitHub Issues](https://github.com/your-username/tatvax-ai-prototype/issues) |
-| 🤝 **Contribute** | [Contributing Guide](#-contributing) |
-| 🗺️ **Roadmap** | [Future Plans](#-roadmap) |
-
----
-
-<div align="center">
-
-## 🌟 **Made with ❤️ by Team Cortex Coders** 🌟
-
-*Breaking language barriers, building futures*
-
-**If TatvaX inspired you or helped in any way, please ⭐ star this repository!**
-
-[![Star on GitHub](https://img.shields.io/github/stars/your-username/TatvaX-Prototype?style=social)](https://github.com/your-username/TatvaX-Prototype)
-[![Fork on GitHub](https://img.shields.io/github/forks/your-username/TatvaX-Prototype?style=social)](https://github.com/your-username/TatvaX-Prototype/fork)
-
-</div>
-
----
-
-> **"Education is the most powerful weapon which you can use to change the world."**  
-> — Nelson Mandela
-
-> **"The beautiful thing about learning is that no one can take it away from you."**  
-> — B.B. King
-
----
-
-<div align="center">
-
-### **© 2025 Team Cortex Coders. All rights reserved.**
-
-*This is a prototype version. The final product will include enhanced features, scalability, and production-grade quality.*
-
-**⚠️ PROTOTYPE - For demonstration and feedback purposes**
-
-</div>
+MIT. See [LICENSE](LICENSE).

@@ -1,0 +1,197 @@
+[
+ {
+  "topic": "number system",
+  "difficulty": "easy",
+  "question": "Which of these is the smallest whole number?",
+  "options": [
+   "1",
+   "0",
+   "-1",
+   "10"
+  ],
+  "answer_index": 1,
+  "explanation": "Whole numbers start at 0, so 0 is the smallest whole number."
+ },
+ {
+  "topic": "number system",
+  "difficulty": "medium",
+  "question": "Which of these numbers is irrational?",
+  "options": [
+   "1/2",
+   "0.75",
+   "√2",
+   "-3"
+  ],
+  "answer_index": 2,
+  "explanation": "√2 cannot be written as a fraction and its decimal never ends or repeats, so it is irrational."
+ },
+ {
+  "topic": "bodmas",
+  "difficulty": "medium",
+  "question": "Using BODMAS, what is 8 + 4 × 2?",
+  "options": [
+   "24",
+   "16",
+   "20",
+   "12"
+  ],
+  "answer_index": 1,
+  "explanation": "Multiplication comes before addition: 4 × 2 = 8, then 8 + 8 = 16."
+ },
+ {
+  "topic": "bodmas",
+  "difficulty": "hard",
+  "question": "What is (6 + 2) × 3 − 4 ÷ 2?",
+  "options": [
+   "22",
+   "10",
+   "18",
+   "26"
+  ],
+  "answer_index": 0,
+  "explanation": "Brackets first: 8 × 3 = 24. Then 4 ÷ 2 = 2. Finally 24 − 2 = 22."
+ },
+ {
+  "topic": "fractions",
+  "difficulty": "easy",
+  "question": "What is 1/4 + 2/4?",
+  "options": [
+   "3/8",
+   "3/4",
+   "1/2",
+   "2/8"
+  ],
+  "answer_index": 1,
+  "explanation": "When denominators are the same, add the numerators: 1 + 2 = 3, so the answer is 3/4."
+ },
+ {
+  "topic": "fractions",
+  "difficulty": "medium",
+  "question": "What is 2/3 × 3/4?",
+  "options": [
+   "6/7",
+   "5/7",
+   "1/2",
+   "8/9"
+  ],
+  "answer_index": 2,
+  "explanation": "Multiply tops and bottoms: (2 × 3)/(3 × 4) = 6/12, which simplifies to 1/2."
+ },
+ {
+  "topic": "decimals",
+  "difficulty": "easy",
+  "question": "In 25.347, what is the place value of the digit 4?",
+  "options": [
+   "Tenths",
+   "Hundredths",
+   "Thousandths",
+   "Ones"
+  ],
+  "answer_index": 1,
+  "explanation": "After the decimal point the places are tenths (3), hundredths (4) and thousandths (7)."
+ },
+ {
+  "topic": "percentages",
+  "difficulty": "easy",
+  "question": "What is 25% of 200?",
+  "options": [
+   "25",
+   "50",
+   "75",
+   "100"
+  ],
+  "answer_index": 1,
+  "explanation": "25% means 25/100. 25/100 × 200 = 50."
+ },
+ {
+  "topic": "percentages",
+  "difficulty": "medium",
+  "question": "A shirt costs ₹500 and has a 20% discount. What is the sale price?",
+  "options": [
+   "₹480",
+   "₹400",
+   "₹450",
+   "₹100"
+  ],
+  "answer_index": 1,
+  "explanation": "20% of 500 is 100, so the price becomes 500 − 100 = ₹400."
+ },
+ {
+  "topic": "algebra",
+  "difficulty": "medium",
+  "question": "If x + 7 = 15, what is x?",
+  "options": [
+   "22",
+   "8",
+   "7",
+   "15"
+  ],
+  "answer_index": 1,
+  "explanation": "Subtract 7 from both sides: x = 15 − 7 = 8."
+ },
+ {
+  "topic": "algebra",
+  "difficulty": "hard",
+  "question": "If 3x − 5 = 16, what is x?",
+  "options": [
+   "7",
+   "11/3",
+   "21",
+   "3"
+  ],
+  "answer_index": 0,
+  "explanation": "Add 5 to both sides: 3x = 21. Divide by 3: x = 7."
+ },
+ {
+  "topic": "geometry",
+  "difficulty": "easy",
+  "question": "An angle of exactly 90° is called…",
+  "options": [
+   "An acute angle",
+   "An obtuse angle",
+   "A right angle",
+   "A straight angle"
+  ],
+  "answer_index": 2,
+  "explanation": "A right angle measures exactly 90°, like the corner of a book."
+ },
+ {
+  "topic": "shapes",
+  "difficulty": "medium",
+  "question": "What is the sum of the interior angles of any triangle?",
+  "options": [
+   "90°",
+   "180°",
+   "270°",
+   "360°"
+  ],
+  "answer_index": 1,
+  "explanation": "The three angles of every triangle always add up to 180°."
+ },
+ {
+  "topic": "area",
+  "difficulty": "medium",
+  "question": "What is the area of a rectangle 8 cm long and 5 cm wide?",
+  "options": [
+   "13 cm²",
+   "26 cm²",
+   "40 cm²",
+   "45 cm²"
+  ],
+  "answer_index": 2,
+  "explanation": "Area of a rectangle = length × width = 8 × 5 = 40 cm²."
+ },
+ {
+  "topic": "perimeter",
+  "difficulty": "hard",
+  "question": "What is the perimeter of a square with side 9 m?",
+  "options": [
+   "18 m",
+   "81 m",
+   "36 m",
+   "27 m"
+  ],
+  "answer_index": 2,
+  "explanation": "Perimeter of a square = 4 × side = 4 × 9 = 36 m."
+ }
+]

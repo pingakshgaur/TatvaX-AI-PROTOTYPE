@@ -1,0 +1,184 @@
+[
+ {
+  "topic": "scientific method",
+  "difficulty": "easy",
+  "question": "What is the first step of the scientific method?",
+  "options": [
+   "Draw a conclusion",
+   "Make an observation or ask a question",
+   "Do the experiment",
+   "Share the results"
+  ],
+  "answer_index": 1,
+  "explanation": "Science starts with noticing something and asking a question about it."
+ },
+ {
+  "topic": "matter",
+  "difficulty": "easy",
+  "question": "Which state of matter has a fixed shape and a fixed volume?",
+  "options": [
+   "Solid",
+   "Liquid",
+   "Gas",
+   "All of them"
+  ],
+  "answer_index": 0,
+  "explanation": "Solids keep both their shape and volume because their particles are tightly packed."
+ },
+ {
+  "topic": "matter",
+  "difficulty": "medium",
+  "question": "What is the change from liquid to gas called?",
+  "options": [
+   "Melting",
+   "Freezing",
+   "Evaporation",
+   "Condensation"
+  ],
+  "answer_index": 2,
+  "explanation": "When a liquid gains heat and turns into a gas, it is evaporation (or boiling)."
+ },
+ {
+  "topic": "matter",
+  "difficulty": "medium",
+  "question": "Water vapour turning into droplets on a cold glass is called…",
+  "options": [
+   "Evaporation",
+   "Condensation",
+   "Sublimation",
+   "Melting"
+  ],
+  "answer_index": 1,
+  "explanation": "When a gas cools and becomes a liquid, it is called condensation."
+ },
+ {
+  "topic": "force",
+  "difficulty": "easy",
+  "question": "A push or a pull on an object is called…",
+  "options": [
+   "Energy",
+   "Force",
+   "Speed",
+   "Work"
+  ],
+  "answer_index": 1,
+  "explanation": "A force is a push or a pull. It can change an object's motion or shape."
+ },
+ {
+  "topic": "force",
+  "difficulty": "medium",
+  "question": "Which force pulls objects towards the Earth?",
+  "options": [
+   "Friction",
+   "Magnetic force",
+   "Gravity",
+   "Muscular force"
+  ],
+  "answer_index": 2,
+  "explanation": "Gravity is the force that pulls everything towards the centre of the Earth."
+ },
+ {
+  "topic": "speed motion",
+  "difficulty": "hard",
+  "question": "A bus travels 120 km in 2 hours. What is its average speed?",
+  "options": [
+   "240 km/h",
+   "60 km/h",
+   "122 km/h",
+   "30 km/h"
+  ],
+  "answer_index": 1,
+  "explanation": "Speed = distance ÷ time = 120 ÷ 2 = 60 km/h."
+ },
+ {
+  "topic": "energy",
+  "difficulty": "medium",
+  "question": "A stretched rubber band stores which kind of energy?",
+  "options": [
+   "Kinetic energy",
+   "Potential energy",
+   "Sound energy",
+   "Light energy"
+  ],
+  "answer_index": 1,
+  "explanation": "Energy stored because of shape or position is potential energy."
+ },
+ {
+  "topic": "light",
+  "difficulty": "easy",
+  "question": "Which of these is a natural source of light?",
+  "options": [
+   "Torch",
+   "Bulb",
+   "Sun",
+   "Candle"
+  ],
+  "answer_index": 2,
+  "explanation": "The Sun makes its own light naturally; the others are made by people."
+ },
+ {
+  "topic": "sound",
+  "difficulty": "medium",
+  "question": "Sound cannot travel through…",
+  "options": [
+   "Water",
+   "Air",
+   "Steel",
+   "Vacuum (empty space)"
+  ],
+  "answer_index": 3,
+  "explanation": "Sound needs a medium to travel. In a vacuum there are no particles to vibrate."
+ },
+ {
+  "topic": "heat conduction",
+  "difficulty": "medium",
+  "question": "Heat travelling along a metal spoon in hot tea is an example of…",
+  "options": [
+   "Conduction",
+   "Convection",
+   "Radiation",
+   "Evaporation"
+  ],
+  "answer_index": 0,
+  "explanation": "In conduction, heat passes from particle to particle through a solid."
+ },
+ {
+  "topic": "heat radiation",
+  "difficulty": "hard",
+  "question": "How does heat from the Sun reach the Earth?",
+  "options": [
+   "Conduction",
+   "Convection",
+   "Radiation",
+   "Reflection"
+  ],
+  "answer_index": 2,
+  "explanation": "Space has almost no particles, so the Sun's heat reaches us by radiation."
+ },
+ {
+  "topic": "water cycle",
+  "difficulty": "easy",
+  "question": "The continuous movement of water between the Earth and the sky is called…",
+  "options": [
+   "Water cycle",
+   "Food chain",
+   "Rain cycle",
+   "Carbon cycle"
+  ],
+  "answer_index": 0,
+  "explanation": "Evaporation, condensation and precipitation together make up the water cycle."
+ },
+ {
+  "topic": "air atmosphere",
+  "difficulty": "medium",
+  "question": "Which gas makes up most of the air around us?",
+  "options": [
+   "Oxygen",
+   "Carbon dioxide",
+   "Nitrogen",
+   "Hydrogen"
+  ],
+  "answer_index": 2,
+  "explanation": "About 78% of air is nitrogen; oxygen is about 21%."
+ }
+]

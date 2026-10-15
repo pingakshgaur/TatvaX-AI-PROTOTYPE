@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="72" fill="#0f5a57"/>
+  <rect x="72" y="72" width="368" height="368" rx="24" fill="none" stroke="#e3eeec" stroke-opacity="0.35" stroke-width="12"/>
+  <text x="256" y="292" text-anchor="middle" dominant-baseline="middle" fill="#ffffff"
+    font-family="Nirmala UI, Noto Sans Devanagari, Mangal, sans-serif" font-size="250" font-weight="600">त</text>
+  <rect x="356" y="356" width="44" height="44" fill="#d9a441"/>
+</svg>
