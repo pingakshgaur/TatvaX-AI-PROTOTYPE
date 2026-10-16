@@ -10,6 +10,7 @@ import { stopSpeaking } from "../lib/voice.js";
 import Celebration from "./Celebration.jsx";
 import { AccountDialog, FeedbackDialog } from "./Dialogs.jsx";
 import ProfileMenu from "./ProfileMenu.jsx";
+import ThemeSwitch from "./ThemeSwitch.jsx";
 import { Loading, Toasts } from "./ui.jsx";
 
 const ShellContext = createContext(null);
@@ -86,6 +87,7 @@ function Sidebar({ open, onNavigate }) {
           </div>
         )}
       </nav>
+      <ThemeSwitch />
     </aside>
   );
 }

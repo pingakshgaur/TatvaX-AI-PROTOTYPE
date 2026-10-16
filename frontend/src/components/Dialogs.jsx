@@ -25,7 +25,7 @@ function ThemePicker({ value, onChange }) {
     <div className="theme-options" role="group" aria-label={t("theme")}>
       {THEMES.map(([name, colors]) => (
         <button key={name} type="button" className="theme-option" aria-pressed={value === name}
-          onClick={() => { onChange(name); applyTheme(name); }}>
+          onClick={() => { onChange(name); applyTheme(name, { animate: true }); }}>
           <span className="swatches">{colors.map((c) => <i key={c} style={{ background: c }} />)}</span>
           {t(`theme_${name}`)}
         </button>

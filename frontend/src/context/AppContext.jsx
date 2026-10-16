@@ -13,10 +13,34 @@ function writeStorage(key, value) {
   try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
 }
 
-export function applyTheme(theme) {
-  if (!theme || theme === "system") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", theme);
-  writeStorage("tatvax.theme", theme || "system");
+export function currentTheme() {
+  return readStorage("tatvax.theme") || "system";
+}
+
+// Switch theme. With { animate: true } the old and new colours cross-fade instead of snapping:
+// a View Transition where the browser supports one, otherwise a short CSS colour transition.
+export function applyTheme(theme, { animate = false } = {}) {
+  const name = theme || "system";
+  const root = document.documentElement;
+  const set = () => {
+    if (name === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", name);
+  };
+  const changed = (root.getAttribute("data-theme") || "system") !== name;
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (animate && changed && !reduced) {
+    if (document.startViewTransition) {
+      document.startViewTransition(set);
+    } else {
+      root.classList.add("theme-switching");
+      set();
+      setTimeout(() => root.classList.remove("theme-switching"), 450);
+    }
+  } else {
+    set();
+  }
+  writeStorage("tatvax.theme", name);
+  window.dispatchEvent(new CustomEvent("tatvax-theme", { detail: name }));
 }
 
 export function AppProvider({ children }) {
