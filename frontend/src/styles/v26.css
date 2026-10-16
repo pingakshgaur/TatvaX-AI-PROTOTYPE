@@ -1,0 +1,154 @@
+/*
+ * TatvaX 2.6: review deck, assignments, the "For today" plan, photo questions and reminders.
+ */
+
+/* ------------------------------------------------------------------ sidebar counts */
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: var(--nav-color, var(--c-coral));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  animation: pop-in 0.35s var(--ease-spring, ease);
+}
+
+.link-btn { padding: 0; border: none; background: none; color: var(--primary); font: inherit; text-decoration: underline; cursor: pointer; }
+.notice-line { margin: -6px 0 16px; padding: 10px 14px; border-radius: 10px; background: var(--notice-tint); font-size: 14px; }
+
+/* ------------------------------------------------------------------ for today */
+
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.plan-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--rule));
+  border-top: 4px solid var(--tone);
+  background: color-mix(in srgb, var(--tone) 5%, var(--surface));
+  color: inherit;
+  text-decoration: none;
+}
+.plan-head { display: flex; align-items: center; gap: 7px; font-weight: 600; color: color-mix(in srgb, var(--tone) 75%, var(--ink)); }
+.plan-flag { margin-left: auto; padding: 1px 8px; border-radius: 99px; background: var(--c-coral); color: #fff; font-size: 11.5px; }
+.plan-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.plan-card li { display: flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; }
+.plan-card li .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-card li a { color: inherit; }
+.plan-card .due { font-size: 12px; color: var(--ink-3); flex-shrink: 0; }
+.plan-card .due.overdue { color: var(--c-coral); font-weight: 600; }
+.plan-card .due.today { color: var(--c-saffron); font-weight: 600; }
+.plan-big { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+.plan-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--tone) 80%, var(--ink)); text-decoration: none; }
+
+/* ------------------------------------------------------------------ review deck */
+
+.review-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.review-due {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--c-plum) 35%, var(--rule));
+  background: color-mix(in srgb, var(--c-plum) 7%, var(--surface));
+  color: var(--c-plum);
+}
+.review-due b { display: block; font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
+.review-due span { color: var(--ink-2); }
+.review-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.review-due > .small { grid-column: 1 / -1; }
+
+.review-boxes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding: 16px; border-radius: 18px; border: 1px solid var(--rule); background: var(--surface); }
+.rb { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.rb-bar { display: flex; align-items: flex-end; width: 100%; max-width: 46px; height: 70px; border-radius: 8px; background: color-mix(in srgb, var(--tone) 10%, var(--surface-sunken)); overflow: hidden; }
+.rb-bar span { display: block; width: 100%; min-height: 3px; background: var(--tone); transition: height 0.8s var(--ease-out, ease); }
+.rb b { font-size: 17px; }
+.rb-label { font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--tone) 80%, var(--ink)); }
+.rb-when { font-size: 11px; color: var(--ink-3); }
+
+.review-box { display: inline-block; flex-shrink: 0; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; color: #fff; background: var(--tone); }
+.review-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.review-card-head .review-box { margin-left: auto; }
+.review-tally { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.review-q { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.review-finished { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: 14px; background: var(--positive-tint); color: var(--positive); }
+.review-finished div { flex: 1; display: grid; color: var(--ink); }
+
+@media (max-width: 860px) {
+  .review-hero { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------------ assignments */
+
+.assignment-list { display: grid; gap: 10px; }
+.assignment-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--tone);
+  background: var(--surface);
+}
+.assignment-card.done { opacity: 0.75; }
+.ac-body { display: grid; gap: 3px; min-width: 0; }
+.ac-body .eyebrow { display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0.02em; }
+.ac-body strong { font-size: 15.5px; }
+.ac-body p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.ac-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12.5px; color: var(--ink-3); }
+.ac-meta .due { display: inline-flex; align-items: center; gap: 3px; }
+.ac-meta .due.overdue { color: var(--c-coral); font-weight: 600; }
+.ac-meta .due.today { color: var(--c-saffron); font-weight: 600; }
+.ac-score { color: var(--positive); font-weight: 600; }
+.ac-buttons { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.ac-progress { display: block; height: 6px; margin-top: 4px; border-radius: 99px; background: var(--surface-sunken); overflow: hidden; }
+.ac-progress span { display: block; height: 100%; background: var(--tone); }
+
+.assign-form { display: grid; gap: 4px; }
+.assign-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 0 14px; }
+.assign-preview { margin-top: 16px; }
+.assign-preview summary { cursor: pointer; font-weight: 600; }
+.assign-preview ol { padding-left: 1.3em; display: grid; gap: 8px; }
+
+@media (max-width: 720px) {
+  .assignment-card { grid-template-columns: auto minmax(0, 1fr); }
+  .ac-buttons { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* ------------------------------------------------------------------ photos in chat */
+
+.photo-btn { cursor: pointer; }
+.photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 8px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+}
+.photo-preview img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--rule); }
+.photo-preview .small { flex: 1; color: var(--ink-2); }
+.turn-photo { display: block; max-width: min(320px, 100%); max-height: 260px; margin-bottom: 8px; border-radius: 10px; border: 1px solid var(--rule); object-fit: contain; background: var(--surface); }
+.photo-chip { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--surface); border: 1px solid var(--rule); vertical-align: 1px; }
+
+/* ------------------------------------------------------------------ to-do links */
+
+.todo-open { padding: 3px 8px; }

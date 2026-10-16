@@ -199,3 +199,18 @@ def test_shared_rate_limit_is_kept_in_the_database(tmp_path):
 def test_days_follow_the_school_clock():
     assert tatvax_db.now_iso().endswith("+05:30")
     assert tatvax_db.today() == tatvax_db.now_iso()[:10]
+
+
+def test_nvidia_photo_questions_use_its_vision_model(monkeypatch):
+    service = AIService("nvapi-" + "z" * 40)
+    used = []
+
+    def fake_stream(state, system, messages, max_tokens):
+        used.append(state.model)
+        yield "text", "ok"
+
+    monkeypatch.setattr(service, "_stream", fake_stream)
+    list(service.stream_reply("s", [{"role": "user", "content": "x"}]))
+    list(service.stream_reply("s", [{"role": "user", "content": "x", "image": {"media_type": "image/png", "data": "QUJD"}}]))
+    assert used == ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3.5-super-vl-120b-a12b"]
+    assert service.states["nvidia"].model in ("", "nvidia/nemotron-3-super-120b-a12b")  # the saved choice is untouched

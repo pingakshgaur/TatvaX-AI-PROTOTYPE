@@ -81,7 +81,9 @@
 .pd-toc li { break-inside: avoid; padding: 2px 0; }
 .pd-toc li small { margin-left: 6px; color: var(--pd-ink-3); }
 
-.pd-chapter { break-before: page; }
+.pd-toc { break-after: page; }
+.pd-chapter { margin-top: 26px; }
+.pd-chapter h2, .pd-topic h3 { break-after: avoid; }
 .pd-chapter h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding-bottom: 6px; font-size: 17pt; border-bottom: 2px solid var(--tone); }
 .pd-num { display: grid; place-items: center; min-width: 30px; height: 30px; border-radius: 8px; background: var(--tone); color: #fff; font-size: 13pt; }
 .pd-topic { margin: 12px 0; break-inside: avoid-page; }
@@ -132,6 +134,20 @@
 .pd-explain { margin-top: 6px; padding: 6px 10px; border-radius: 5px; background: #f6f4ef; font-size: 9.5pt; color: var(--pd-ink-2); }
 .pd-explain b { margin-right: 6px; color: var(--pd-ink); }
 
+/* progress report */
+.pd-facts.four { grid-template-columns: repeat(4, 1fr); }
+.pd-facts.four dd { font-size: 13pt; }
+.pd-note { margin: 12px 0 0; padding: 8px 12px; border-left: 3px solid #0e9f8e; background: #eef8f6; border-radius: 4px; }
+.pd-h3 { margin: 16px 0 6px; font-size: 11.5pt; }
+.pd-activity { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; align-items: end; height: 22mm; padding: 4px; border-radius: 6px; background: #f6f4ef; }
+.pd-activity span { display: flex; align-items: flex-end; height: 100%; }
+.pd-activity i { display: block; width: 100%; min-height: 2px; border-radius: 2px 2px 0 0; background: #0e9f8e; }
+.pd-activity-axis { display: flex; justify-content: space-between; font-size: 7.5pt; color: var(--pd-ink-3); margin-top: 2px; }
+.pd-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; vertical-align: 1px; }
+.pd-badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; }
+.pd-badges li { display: grid; padding: 6px 10px; border-radius: 6px; background: #f6f4ef; break-inside: avoid; }
+.pd-badges span { font-size: 9pt; color: var(--pd-ink-2); }
+
 .pd-footer { margin-top: 22px; padding-top: 8px; border-top: 1px solid var(--pd-rule); font-size: 8pt; color: var(--pd-ink-3); text-align: center; }
 
 @media print {
@@ -142,6 +158,7 @@
 }
 
 @media (max-width: 640px) {
+  .pd-facts.four { grid-template-columns: repeat(2, 1fr); }
   .print-doc { padding: 20px 16px; }
   .pd-score { grid-template-columns: 1fr; }
   .pd-toc ol { columns: 1; }

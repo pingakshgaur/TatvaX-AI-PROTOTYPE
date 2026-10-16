@@ -1,5 +1,5 @@
 import {
-  BarChart3, Cpu, Eye, FilePenLine, Lock, MessageSquareText, PenLine, Plus, Save, Trash2, Users,
+  BarChart3, ClipboardList, Cpu, Eye, FileDown, FilePenLine, Lock, MessageSquareText, PenLine, Plus, Save, Trash2, Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -9,12 +9,14 @@ import { useCrumbs, useShell } from "../components/Shell.jsx";
 import { Dialog, EmptyState, Loading, Markdown, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import AISettings from "./AISettings.jsx";
+import TeacherAssignments from "./TeacherAssignments.jsx";
 import { api } from "../lib/api.js";
 import { formatNumber, shortDate, timeAgo } from "../lib/format.js";
 
 const TABS = [
   ["overview", BarChart3, "overview"],
   ["students", Users, "students"],
+  ["assignments", ClipboardList, "nav_assignments"],
   ["content", FilePenLine, "content"],
   ["feedback", MessageSquareText, "feedback"],
   ["ai", Cpu, "ai_settings"],
@@ -87,7 +89,7 @@ function Students() {
         <table className="table">
           <thead><tr>
             <th>Student</th><th className="num">Class</th><th className="num">Level</th><th className="num">XP</th>
-            <th className="num">Questions</th><th className="num">Assessments</th><th className="num">Average</th><th>Last active</th>
+            <th className="num">Questions</th><th className="num">Assessments</th><th className="num">Average</th><th>Last active</th><th><span className="sr-only">Report</span></th>
           </tr></thead>
           <tbody>{data.students.map((s) => (
             <tr key={s.id}>
@@ -99,6 +101,8 @@ function Students() {
               <td className="num">{formatNumber(s.quizzes)}</td>
               <td className="num">{s.quiz_average != null ? `${s.quiz_average}%` : "—"}</td>
               <td className="small muted">{s.last_active ? timeAgo(`${s.last_active}T12:00:00Z`) : "—"}</td>
+              <td><a className="btn btn-ghost btn-sm" href={`/print/student/${s.id}`} target="_blank" rel="noopener"
+                title="Progress report as a PDF, for parents or records"><FileDown size={14} /> Report</a></td>
             </tr>
           ))}</tbody>
         </table>
@@ -271,6 +275,10 @@ export default function TeacherConsole() {
   const tab = TABS.some(([name]) => name === params.tab) ? params.tab : "overview";
   const tabLabel = TABS.find(([name]) => name === tab)[2];
   useCrumbs([{ label: t("nav_teacher"), to: "/teacher" }, { label: t(tabLabel) }]);
+  // On narrow screens the tab row scrolls; keep the open tab visible.
+  useEffect(() => {
+    document.querySelector(".tabs .active")?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [tab]);
 
   if (!user || user.is_guest || user.role !== "teacher") {
     return (
@@ -298,6 +306,7 @@ export default function TeacherConsole() {
       </nav>
       {tab === "overview" && <Overview />}
       {tab === "students" && <Students />}
+      {tab === "assignments" && <TeacherAssignments />}
       {tab === "content" && <ContentEditor selected={params.slug} />}
       {tab === "feedback" && <Feedback />}
       {tab === "ai" && <AISettings />}

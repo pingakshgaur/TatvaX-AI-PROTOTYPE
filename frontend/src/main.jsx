@@ -12,6 +12,7 @@ import "./styles/tokens.css";
 import "./styles/app.css";
 import "./styles/experience.css";
 import "./styles/v251.css";
+import "./styles/v26.css";
 import "./styles/print.css";
 
 import { StrictMode } from "react";

@@ -1,4 +1,4 @@
-# TatvaX v2.5.1
+# TatvaX v2.6
 
 **A multilingual AI tutor, assessment platform and AI school companion for Indian students.**
 
@@ -7,6 +7,21 @@ Students ask questions by typing or speaking in any of 16 Indian languages, get 
 [Watch the v1 prototype in action](https://youtu.be/hqo_TAZh0ls)
 
 ---
+
+## What's new in version 2.6
+
+- **Review deck**: every question a student gets wrong in an assessment becomes a review card. Cards come back on a widening schedule (today, tomorrow, in 3 days, a week, two weeks) until they are mastered. Mistakes from earlier assessments are added automatically on upgrade.
+- **Assignments**: teachers set an assessment or reading for a class, with a due date. Every student answers the same questions (written once, then reshuffled per student), and the Teacher console shows who has finished and their scores.
+- **Progress reports**: a printable PDF of a student's level, activity over 30 days, results per subject, recent assessments, badges and review deck. Students download their own from Progress; teachers download any student's from the Students table, for parents or records.
+- **Questions with a photo**: attach or paste a picture of a textbook problem. On NVIDIA, photo questions automatically use NVIDIA's free vision model (Nemotron 3.5 Super VL), while text questions stay on the model you chose. Gemini, OpenAI and Claude read photos with their usual models.
+- **Reminders**: a "For today" panel on the overview (to-dos due, review cards, unfinished assignments), counts in the sidebar, and a once-a-day reminder about due tasks. To-dos can link to a page, and "Add to to-do" appears on assessment results and on every chapter of the notes.
+- **16 languages**: Nepali, Sanskrit and Konkani join the 13 from before.
+- **Faster first visit**: pages and the maths renderer load when needed, so the first download is about a third of what it was (703 KB down to 268 KB).
+- **Undo**: deleting a to-do, an assessment or a review card can be undone from the notification.
+- **School time zone**: streaks, daily goals and due dates follow the school's clock (India by default; set `TATVAX_UTC_OFFSET_MINUTES` elsewhere).
+- **Several server processes**: set `TATVAX_SHARED_RATE_LIMIT=1` to keep rate limits in the database so all workers share them.
+- **Continuous integration**: GitHub Actions runs the backend tests on Python 3.11 and 3.13 and builds the frontend on every push.
+- The interface of the to-do list, assessment history and exports is translated into every language.
 
 ## What's new in version 2.5.1
 
@@ -29,7 +44,7 @@ Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingaks
 | Area | v1 prototype | v2 |
 |---|---|---|
 | Answers | Keyword overlap returned raw paragraphs | An **AI tutor** (open models on NVIDIA's free API) explains step by step, grounded in the school's notes, in the student's language. Without a key, a BM25 search over the notes answers instead. |
-| Languages | 8 | **13**: English, Hindi, Bengali, Marathi, Telugu, Tamil, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu |
+| Languages | 8 | **16**: English, Hindi, Bengali, Marathi, Telugu, Tamil, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu, Nepali, Sanskrit, Konkani |
 | Voice | Recorded from the *server's* microphone; crashed on use | Speech recognition **in the browser**; read-aloud uses the browser's voice, or server-generated audio as a fallback |
 | Content | `content_library/*.txt` was never loaded (path bug) | Notes stored in a database, editable by teachers, used instantly by the tutor |
 | Frontend | HTML/CSS/JS template | **React 18 + Vite**, custom design system, 5 themes, installable PWA with offline notes |
@@ -38,13 +53,13 @@ Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingaks
 | Motivation | None | XP, levels, daily streaks, 10 achievements, weekly class leaderboard |
 | Teachers | None | Teacher console: analytics, student table, content editor, feedback inbox |
 | Security | Hard-coded secret key, `debug=True` on `0.0.0.0`, feedback (with emails) saved to a public folder | Generated secret, local-only dev server, strict CSP, JSON-only writes (CSRF defence), rate limits, private feedback |
-| Tests | None | 76 backend tests |
+| Tests | None | 90 backend tests, run on every push by GitHub Actions |
 
 Bugs fixed from v1 include: speech output stripped the vowel signs (matras) from every Indic sentence; good translations were thrown away whenever they contained the word "error"; word replacements turned "hardware" into "needs practiceware"; voice input crashed; the app crashed at start-up on a default Windows console.
 
 ### Roadmap items delivered
 
-From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentication and profiles, learning progress tracking, multiple UI themes, PWA offline support, 15+ language support (13 delivered), gamification (points, badges, leaderboards), interactive quizzes and assessments, an analytics dashboard, AI tutor personalisation (by class and language), and a teacher dashboard with a content editor.
+From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentication and profiles, learning progress tracking, multiple UI themes, PWA offline support, 15+ language support (16 delivered), gamification (points, badges, leaderboards), interactive quizzes and assessments, an analytics dashboard, AI tutor personalisation (by class and language), and a teacher dashboard with a content editor.
 
 ---
 
@@ -162,6 +177,9 @@ TatvaX/
 │   ├── api.py              # student API
 │   ├── admin.py            # teacher API
 │   ├── todos.py            # to-do list API
+│   ├── review.py           # review deck (spaced repetition)
+│   ├── assignments.py      # work teachers set for a class
+│   ├── reports.py          # progress reports
 │   └── security.py         # CSRF guard, rate limiting, roles
 ├── frontend/               # React 18 + Vite
 │   ├── src/pages/          # Overview, Subjects, Chat, Assessments, Notes, To-dos, Teacher, print exports
@@ -199,6 +217,11 @@ All endpoints are under `/api`. Writes must be JSON.
 | GET/DELETE | `/quizzes`, `/quiz/<id>` | Assessment history and review |
 | GET/POST/PATCH/DELETE | `/todos[/<id>]`, POST `/todos/reorder`, `/todos/bulk`, `/todos/<id>/duplicate` | To-do list |
 | GET | `/subjects/overview` | Per-subject facts for the Subjects page |
+| GET/POST/DELETE | `/review`, `/review/all`, `/review/<id>` | Review deck: due cards, answer a card, remove a card |
+| GET/POST | `/assignments`, `/assignments/<id>/start`, `/assignments/<id>/done` | A student's assignments |
+| GET/POST/PATCH/DELETE | `/admin/assignments[/<id>]` | Setting assignments and following progress |
+| GET | `/report`, `/admin/students/<id>/report` | Progress reports |
+| GET | `/todos/summary` | To-dos due today or overdue, for reminders |
 | GET | `/progress`, `/leaderboard` | Progress and gamification |
 | GET | `/library[/<slug>]`, `/search?q=` | Study notes |
 | POST | `/translate`, `/tts` | Translation and speech |
@@ -220,11 +243,15 @@ build:  pip install -r requirements.txt && cd frontend && npm ci && npm run buil
 start:  gunicorn "run:app" --worker-class gthread --threads 8 --timeout 180
 ```
 
-Set `TATVAX_SECRET_KEY`, `TATVAX_SECURE_COOKIES=1` (on HTTPS) and `TATVAX_BEHIND_PROXY=1` (behind a proxy), and give the server a persistent disk for `instance/`. That folder holds the SQLite database, including any AI keys saved from the console, so keep it private. Rate limits are in-memory, so run a single process, or put a shared limiter in front if you scale out.
+Set `TATVAX_SECRET_KEY`, `TATVAX_SECURE_COOKIES=1` (on HTTPS) and `TATVAX_BEHIND_PROXY=1` (behind a proxy), and give the server a persistent disk for `instance/`. That folder holds the SQLite database, including any AI keys saved from the console, so keep it private. Rate limits are kept in memory by default; if you run several worker processes (for example `gunicorn -w 4`), set `TATVAX_SHARED_RATE_LIMIT=1` so they share limits through the database. Set `TATVAX_UTC_OFFSET_MINUTES` if the school is outside India.
 
 ---
 
 ## Known limitations
+
+- TatvaX stores data in SQLite, which comfortably serves one school on one server. A multi-school deployment would need a move to a database server such as PostgreSQL, which is not built in yet.
+- Photos are sent to the AI provider to be answered and are not stored. With NVIDIA, Gemini, OpenAI or Claude they work out of the box; other providers need a model that accepts images.
+- Nepali, Sanskrit and Konkani have the main screens translated; voice input for Sanskrit and Konkani depends on the browser.
 
 - Voice *input* uses the browser's Web Speech API, which works in Chrome and Edge but not Firefox. Read-aloud falls back to server-generated audio when the device has no voice for a language; Odia and Assamese only work on devices that provide their own voice.
 - The interface is fully translated into English. The other 12 languages cover the main screens and fall back to English for the rest; review by native speakers is welcome. AI answers are fully in the chosen language.

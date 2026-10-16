@@ -307,7 +307,8 @@
 
 .ai-panel-title { display: inline-flex; align-items: center; gap: 8px; }
 .model-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.model-row .select { flex: 1 1 260px; width: auto; }
+.model-row { min-width: 0; }
+.model-row .select { flex: 1 1 260px; width: auto; min-width: 0; max-width: 100%; }
 .ai-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; }
 .ai-actions .spacer { flex: 1; }
 .ai-help { margin-top: 20px; padding: 14px 16px; border-radius: 12px; background: var(--surface-sunken); }

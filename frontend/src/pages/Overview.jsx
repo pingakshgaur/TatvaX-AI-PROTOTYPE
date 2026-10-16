@@ -1,5 +1,5 @@
 import {
-  ArrowRight, Award, BookOpen, ClipboardCheck, Flame, Languages, MessageSquareText, Sparkles, Star, Target,
+  ArrowRight, Award, BookOpen, Brain, ClipboardCheck, ClipboardList, Flame, ListChecks, Languages, MessageSquareText, Sparkles, Star, Target,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,6 +10,85 @@ import { CountUp } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
 import { timeAgo } from "../lib/format.js";
+
+// What needs attention today: to-dos due or overdue, review cards and unfinished class work.
+function TodayPlan() {
+  const { t, user, notify, progressVersion } = useApp();
+  const [plan, setPlan] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    Promise.all([
+      api("/api/todos/summary").catch(() => ({ next: [], today: 0, overdue: 0 })),
+      api("/api/review").then((r) => r.summary).catch(() => ({ due: 0 })),
+      user && !user.is_guest ? api("/api/assignments").then((r) => r.assignments.filter((a) => a.status.state !== "done")).catch(() => []) : [],
+    ]).then(([todos, review, assignments]) => live && setPlan({ todos, review, assignments }));
+    return () => { live = false; };
+  }, [user?.id, user?.is_guest, progressVersion]);
+
+  if (!plan) return null;
+  const { todos, review, assignments } = plan;
+  if (!todos.next.length && !review.due && !assignments.length) return null;
+
+  const tick = async (todo) => {
+    setPlan((p) => ({ ...p, todos: { ...p.todos, next: p.todos.next.filter((x) => x.id !== todo.id) } }));
+    try {
+      await api(`/api/todos/${todo.id}`, { method: "PATCH", body: { done: true } });
+      notify(`Done: ${todo.title}`);
+    } catch (err) {
+      notify(err.message, { kind: "error" });
+    }
+  };
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+  return (
+    <section className="section today-plan">
+      <div className="section-head"><h2>For today</h2></div>
+      <div className="plan-grid stagger">
+        {todos.next.length > 0 && (
+          <div className="plan-card" style={{ "--tone": "var(--c-indigo)", "--i": 0 }}>
+            <span className="plan-head"><ListChecks size={16} /> {t("nav_todos")}
+              {todos.overdue > 0 && <span className="plan-flag">{todos.overdue} overdue</span>}</span>
+            <ul>
+              {todos.next.slice(0, 4).map((todo) => (
+                <li key={todo.id}>
+                  <button type="button" className="check sm" role="checkbox" aria-checked="false" aria-label={`Mark ${todo.title} as done`} onClick={() => tick(todo)} />
+                  <span className="grow">{todo.link ? <Link to={todo.link}>{todo.title}</Link> : todo.title}</span>
+                  <span className={`due ${todo.due_date < today ? "overdue" : "today"}`}>{todo.due_date < today ? "Overdue" : "Today"}</span>
+                </li>
+              ))}
+            </ul>
+            <Link className="plan-link" to="/todos">{t("open_todos")} <ArrowRight size={14} /></Link>
+          </div>
+        )}
+        {review.due > 0 && (
+          <Link to="/review" className="plan-card lift" style={{ "--tone": "var(--c-plum)", "--i": 1 }}>
+            <span className="plan-head"><Brain size={16} /> {t("nav_review")}</span>
+            <span className="plan-big"><CountUp value={review.due} /></span>
+            <span className="small muted">question{review.due === 1 ? "" : "s"} you missed before, ready to practise again</span>
+            <span className="plan-link">Start review <ArrowRight size={14} /></span>
+          </Link>
+        )}
+        {assignments.length > 0 && (
+          <div className="plan-card" style={{ "--tone": "var(--c-saffron)", "--i": 2 }}>
+            <span className="plan-head"><ClipboardList size={16} /> {t("nav_assignments")}</span>
+            <ul>
+              {assignments.slice(0, 3).map((a) => (
+                <li key={a.id}>
+                  <SubjectArt subject={a.subjects[0]} size={24} />
+                  <span className="grow">{a.title}</span>
+                  {a.due_date && <span className={`due ${a.overdue ? "overdue" : a.due_date === today ? "today" : ""}`}>
+                    {a.overdue ? "Overdue" : new Date(`${a.due_date}T00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>}
+                </li>
+              ))}
+            </ul>
+            <Link className="plan-link" to="/assignments">See all <ArrowRight size={14} /></Link>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function Title({ text, lang }) {
   // Highlight the second half of the English headline ("in your language").
@@ -92,6 +171,8 @@ export default function Overview() {
           <span className="qc-label">{t("badges")} unlocked</span>
         </Link>
       </div>
+
+      <TodayPlan />
 
       {recent && (
         <section className="section">

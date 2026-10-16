@@ -1,11 +1,12 @@
-import { CheckCircle2, ChevronRight, ClipboardCheck, FileDown, Lightbulb, MessageSquareText, Search, Sigma, Star } from "lucide-react";
+import { CheckCircle2, ChevronRight, ClipboardCheck, FileDown, Lightbulb, ListPlus, MessageSquareText, Search, Sigma, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
 import SubjectArt from "../components/SubjectArt.jsx";
 import { EmptyState, Loading, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
+import addTodo, { tomorrow } from "../lib/addTodo.js";
 import { api } from "../lib/api.js";
 
 function NotesSearch({ subject }) {
@@ -173,7 +174,8 @@ function Topic({ topic, docSlug, kind }) {
 }
 
 export function LibraryDocument() {
-  const { t } = useApp();
+  const { t, notify } = useApp();
+  const navigate = useNavigate();
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const [doc, setDoc] = useState(null);
@@ -284,6 +286,10 @@ export function LibraryDocument() {
                           <ClipboardCheck size={14} /> <span>Quiz me</span>
                         </Link>
                       )}
+                      <button className="btn btn-sm btn-ghost" type="button" title="Add this chapter to your to-do list" onClick={() => addTodo(notify, navigate, {
+                        title: `Revise ${doc.title}: ${chapter.title}`, due_date: tomorrow(),
+                        subject: doc.kind === "subject" ? doc.slug : null, link: `/notes/${doc.slug}?h=${encodeURIComponent(chapter.title)}`, tags: ["revision"],
+                      })}><ListPlus size={14} /> <span>To-do</span></button>
                       <button className={`btn btn-sm${done ? " done" : ""}`} type="button" aria-pressed={done} onClick={() => toggleRead(id)}>
                         <CheckCircle2 size={14} /> <span>{done ? "Read" : "Mark as read"}</span>
                       </button>

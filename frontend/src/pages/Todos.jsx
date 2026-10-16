@@ -1,8 +1,10 @@
 import {
-  ArrowDownUp, CalendarDays, Check, CheckCheck, ChevronDown, Copy, Flag, GripVertical, ListChecks, Plus, RotateCcw,
+  ArrowDownUp, CalendarDays, Check, CheckCheck, ChevronDown, Copy, ExternalLink, Flag, GripVertical, ListChecks, Plus, RotateCcw,
   Search, SquareCheck, Tag, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { Link } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
 import SubjectArt from "../components/SubjectArt.jsx";
@@ -180,6 +182,9 @@ function TodoItem({ todo, open, selecting, selected, draggable, onToggleOpen, on
         </button>
         {subject && <SubjectArt subject={subject} size={30} />}
         <div className="todo-actions">
+          {todo.link && (
+            <Link className="btn btn-secondary btn-sm todo-open" to={todo.link} title="Open the page this task is about"><ExternalLink size={13} /> Open</Link>
+          )}
           <button type="button" className="icon-btn" title="Duplicate" aria-label={`Duplicate ${todo.title}`} onClick={onDuplicate}><Copy size={14} /></button>
           <button type="button" className="icon-btn" title="Delete" aria-label={`Delete ${todo.title}`} onClick={onDelete}><Trash2 size={14} /></button>
           <button type="button" className="icon-btn" aria-label={open ? "Close details" : "Edit details"} onClick={onToggleOpen}>

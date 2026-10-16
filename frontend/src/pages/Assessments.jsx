@@ -1,5 +1,5 @@
 import {
-  ArrowLeft, ArrowRight, Check, CheckCheck, Clock, FileDown, Flag, Flame, History, Layers, Lightbulb, MessageSquareText,
+  ArrowLeft, ArrowRight, Check, CheckCheck, Clock, FileDown, Flag, Flame, History, Layers, Lightbulb, ListPlus, MessageSquareText,
   Play, RotateCcw, Shuffle, Timer, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +10,7 @@ import { useCrumbs } from "../components/Shell.jsx";
 import SubjectArt from "../components/SubjectArt.jsx";
 import { Dialog, InlineMarkdown, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
+import addTodo, { tomorrow } from "../lib/addTodo.js";
 import { api } from "../lib/api.js";
 
 const KEYS = ["A", "B", "C", "D"];
@@ -356,7 +357,8 @@ export function ExamRunner({ quiz, onFinish }) {
 // ------------------------------------------------------------------ results
 
 export function Results({ quiz, outcome, onRestart, onRetry, review: reviewing = false }) {
-  const { t, celebrate } = useApp();
+  const { t, celebrate, notify } = useApp();
+  const navigate = useNavigate();
   const celebrated = useRef(false);
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState("");
@@ -414,6 +416,14 @@ export function Results({ quiz, outcome, onRestart, onRetry, review: reviewing =
               <button className={`btn ${wrong.length ? "btn-ghost" : ""}`} type="button" onClick={onRestart}><Play size={15} /> {reviewing ? "Retake this assessment" : t("try_again")}</button>
               <a className="btn btn-ghost" href={`/print/assessment/${quiz.id}`} target="_blank" rel="noopener"><FileDown size={15} /> {t("export_pdf")}</a>
               <Link className="btn btn-ghost" to="/assessments/history"><History size={15} /> History</Link>
+              {quiz.id && (
+                <button className="btn btn-ghost" type="button" onClick={() => addTodo(notify, navigate, {
+                  title: wrong.length ? `Revise ${quiz.subject_title}: ${wrong.length} mistake${wrong.length === 1 ? "" : "s"} to go over` : `Retake ${quiz.subject_title} assessment`,
+                  due_date: tomorrow(), priority: wrong.length > total / 2 ? "high" : "medium",
+                  subject: quiz.subjects.length === 1 ? quiz.subjects[0].slug : null,
+                  link: `/assessments/review/${quiz.id}`, tags: ["assessment"],
+                })}><ListPlus size={15} /> Add to to-do</button>
+              )}
             </div>
             {error && <p className="form-error">{error}</p>}
           </div>

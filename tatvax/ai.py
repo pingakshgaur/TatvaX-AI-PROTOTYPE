@@ -5,6 +5,7 @@ APIs; Claude goes through Anthropic's own SDK. Every public call raises AIUnavai
 model can't answer (no key, rejected key, rate limit, network), so callers fall back to the
 offline study-notes engine instead of failing the student's request."""
 
+import dataclasses
 import json
 import logging
 import os
@@ -46,6 +47,7 @@ class Provider:
     needs_base_url: bool = False
     extra_body: dict = field(default_factory=dict)
     request_options: dict = field(default_factory=dict)
+    vision_model: str = ""           # used for questions with a photo when the chosen model is text-only
 
 
 PROVIDERS: dict[str, Provider] = {p.id: p for p in [
@@ -53,7 +55,8 @@ PROVIDERS: dict[str, Provider] = {p.id: p for p in [
              DEFAULT_MODEL, tuple((m["id"], m["name"], m["note"]) for m in RECOMMENDED_MODELS),
              "Free developer key, about 40 requests a minute.",
              # Answer directly instead of reasoning first: replies start about twice as fast.
-             extra_body={"chat_template_kwargs": {"enable_thinking": False}}),
+             extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+             vision_model="nvidia/nemotron-3.5-super-vl-120b-a12b"),
     Provider("gemini", "Google Gemini", "openai", "https://generativelanguage.googleapis.com/v1beta/openai/",
              ("GEMINI_API_KEY", "GOOGLE_API_KEY"), "AIza", "https://aistudio.google.com/apikey", "gemini-flash-latest",
              (("gemini-flash-latest", "Gemini Flash (latest)", "Fast, free tier available."),
@@ -105,6 +108,9 @@ PROVIDERS: dict[str, Provider] = {p.id: p for p in [
 
 # Models in a provider's list that can't chat (embeddings, speech, images, moderation...).
 _NOT_CHAT = re.compile(r"embed|whisper|tts|speech|audio|image|dall-e|vision-only|moderation|rerank|guard|transcri|realtime|clip|ocr", re.I)
+
+
+_LOOKS_VISUAL = re.compile(r"(vision|[-_.]vl|-vl-|maverick|scout|multimodal|omni)", re.I)
 
 
 class AIUnavailable(Exception):
@@ -466,6 +472,10 @@ class AIService:
         has_image = any(m.get("image") for m in messages)
         messages = self._with_images(state.provider.kind, messages)
         if has_image:
+            vision = state.provider.vision_model
+            if vision and not _LOOKS_VISUAL.search(state.model or ""):
+                # The chosen model reads text only; send the photo question to the provider's vision model.
+                state = dataclasses.replace(state, model=vision, dropped=set(state.dropped))
             try:
                 yield from self._stream(state, system, messages, max_tokens)
             except AIUnavailable as exc:

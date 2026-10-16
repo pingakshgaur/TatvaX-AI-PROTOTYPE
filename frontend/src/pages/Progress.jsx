@@ -1,4 +1,4 @@
-import { Target, TrendingUp } from "lucide-react";
+import { FileDown, Target, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -54,7 +54,10 @@ export default function Progress() {
   return (
     <>
       <PageHeader eyebrow={t("group_account")} title={t("progress_title")}
-        actions={user?.is_guest && <button className="btn" type="button" onClick={() => openAccount("register")}>{t("create_account")}</button>} />
+        actions={<>
+          <a className="btn btn-secondary" href="/print/report" target="_blank" rel="noopener"><FileDown size={15} /> Progress report (PDF)</a>
+          {user?.is_guest && <button className="btn" type="button" onClick={() => openAccount("register")}>{t("create_account")}</button>}
+        </>} />
       {user?.is_guest && (
         <div className="panel" style={{ marginBottom: 20, background: "var(--accent-tint)", borderColor: "transparent" }}>
           <div className="panel-body small">{t("guest_note")}</div>

@@ -1,10 +1,11 @@
 import {
-  BookOpen, ClipboardCheck, Languages, LayoutGrid, Library, ListChecks, Menu, ShieldCheck, Sparkles,
+  BookOpen, Brain, ClipboardCheck, ClipboardList, Languages, LayoutGrid, Library, ListChecks, Menu, ShieldCheck, Sparkles,
 } from "lucide-react";
 import { createContext, Suspense, useCallback, useContext, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useApp } from "../context/AppContext.jsx";
+import { api } from "../lib/api.js";
 import { stopSpeaking } from "../lib/voice.js";
 import Celebration from "./Celebration.jsx";
 import { AccountDialog, FeedbackDialog } from "./Dialogs.jsx";
@@ -24,15 +25,33 @@ export function useCrumbs(crumbs) {
   useEffect(() => { setCrumbs(JSON.parse(key)); }, [key, setCrumbs]);
 }
 
+// Small counts next to sidebar links: review cards due, unfinished assignments, to-dos due today or overdue.
+function useCounts(user, version, path) {
+  const [counts, setCounts] = useState({ review: 0, assignments: 0, todos: 0 });
+  useEffect(() => {
+    if (!user) { setCounts({ review: 0, assignments: 0, todos: 0 }); return undefined; }
+    let live = true;
+    Promise.all([
+      api("/api/review").then((r) => r.summary.due).catch(() => 0),
+      user.is_guest ? 0 : api("/api/assignments").then((r) => r.assignments.filter((a) => a.status.state !== "done").length).catch(() => 0),
+      api("/api/todos/summary").then((r) => r.today + r.overdue).catch(() => 0),
+    ]).then(([review, assignments, todos]) => live && setCounts({ review, assignments, todos }));
+    return () => { live = false; };
+  }, [user?.id, user?.is_guest, version, path]); // eslint-disable-line react-hooks/exhaustive-deps
+  return counts;
+}
+
 function Sidebar({ open, onNavigate }) {
-  const { t, user, app } = useApp();
+  const { t, user, app, progressVersion } = useApp();
   const location = useLocation();
   const learnActive = location.pathname.startsWith("/learn") || location.pathname === "/subjects";
-  const link = (to, Icon, label, color, { end = false, active } = {}) => (
+  const counts = useCounts(user, progressVersion, location.pathname);
+  const link = (to, Icon, label, color, { end = false, active, badge } = {}) => (
     <NavLink to={to} end={end} onClick={onNavigate} style={{ "--nav-color": color }}
       className={({ isActive }) => `nav-link${(active ?? isActive) ? " active" : ""}`}>
       <Icon size={17} strokeWidth={1.75} aria-hidden="true" />
       <span>{label}</span>
+      {badge > 0 && <span className="nav-badge" aria-label={`${badge} waiting`}>{badge > 99 ? "99+" : badge}</span>}
     </NavLink>
   );
 
@@ -49,13 +68,16 @@ function Sidebar({ open, onNavigate }) {
           {link("/", LayoutGrid, t("nav_overview"), "var(--c-teal)", { end: true })}
           {link("/subjects", Library, t("nav_subjects"), "var(--c-indigo)", { active: learnActive })}
           {link("/tatvai", Sparkles, t("nav_helpdesk"), "var(--c-plum)")}
+          {user && !user.is_guest && user.role !== "teacher"
+            && link("/assignments", ClipboardList, t("nav_assignments"), "var(--c-saffron)", { badge: counts.assignments })}
         </div>
         <div className="nav-group">
           <span className="eyebrow">{t("group_practice")}</span>
           {link("/assessments", ClipboardCheck, t("nav_quiz"), "var(--c-coral)")}
+          {link("/review", Brain, t("nav_review"), "var(--c-plum)", { badge: counts.review })}
           {link("/notes", BookOpen, t("nav_library"), "var(--c-saffron)")}
           {link("/translate", Languages, t("nav_translate"), "var(--c-leaf)")}
-          {link("/todos", ListChecks, t("nav_todos"), "var(--c-indigo)")}
+          {link("/todos", ListChecks, t("nav_todos"), "var(--c-indigo)", { badge: counts.todos })}
         </div>
         {user?.role === "teacher" && (
           <div className="nav-group">
@@ -85,6 +107,22 @@ export default function Shell() {
     stopSpeaking();
     setMenuOpen(false);
   }, [location.pathname]);
+
+  // Once a day, remind the learner about to-dos that are due today or overdue.
+  const { notify, user } = useApp();
+  useEffect(() => {
+    if (!user) return;
+    const day = new Date().toDateString();
+    try { if (localStorage.getItem("tatvax.reminded") === day) return; } catch { return; }
+    api("/api/todos/summary").then((s) => {
+      const due = s.today + s.overdue;
+      try { localStorage.setItem("tatvax.reminded", day); } catch { /* storage unavailable */ }
+      if (!due) return;
+      notify(`${due} task${due === 1 ? " is" : "s are"} due${s.overdue ? ` (${s.overdue} overdue)` : " today"}`, {
+        detail: s.next[0]?.title, duration: 8000, action: { label: "Open list", onClick: () => navigate("/todos") },
+      });
+    }).catch(() => {});
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (event) => {

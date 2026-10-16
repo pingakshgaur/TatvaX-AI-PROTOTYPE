@@ -1,5 +1,6 @@
 import {
-  ArrowUp, Check, ClipboardCheck, Copy, CornerDownRight, Eraser, Languages, Mic, PanelLeft, Pencil, Plus, RotateCcw,
+  ArrowUp, Check, ClipboardCheck, Copy, CornerDownRight, Eraser, Image as ImageIcon, ImagePlus, Languages, Mic, PanelLeft,
+  Pencil, Plus, RotateCcw,
   Sparkles, Square, Trash2, Volume2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import { api, ApiError, streamChat } from "../lib/api.js";
 import { timeAgo } from "../lib/format.js";
 import { SUGGESTIONS } from "../lib/i18n.js";
 import { plainText } from "../lib/markdown.js";
+import { PHOTO_MARK, preparePhoto } from "../lib/photo.js";
 import { canListen, listen, speak, stopSpeaking } from "../lib/voice.js";
 
 const CHIP_COLORS = ["var(--c-teal)", "var(--c-indigo)", "var(--c-coral)"];
@@ -81,8 +83,10 @@ function TranslateAnswer({ text, onClose }) {
 // The student's own prompt, with tools to copy it, edit and ask again, or ask it again as it is.
 function UserTurn({ message, busy, onEdit, onResend }) {
   const { t, notify } = useApp();
+  const hadPhoto = Boolean(message.image) || message.content.startsWith(PHOTO_MARK);
+  const content = message.content.startsWith(PHOTO_MARK) ? message.content.slice(PHOTO_MARK.length) : message.content;
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(message.content);
+  const [draft, setDraft] = useState(() => (message.content.startsWith(PHOTO_MARK) ? message.content.slice(PHOTO_MARK.length) : message.content));
   const editRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -93,7 +97,7 @@ function UserTurn({ message, busy, onEdit, onResend }) {
   }, [draft, editing]);
 
   const startEdit = () => {
-    setDraft(message.content);
+    setDraft(content);
     setEditing(true);
     requestAnimationFrame(() => {
       const el = editRef.current;
@@ -104,7 +108,7 @@ function UserTurn({ message, busy, onEdit, onResend }) {
     const text = draft.trim();
     if (!text) return;
     setEditing(false);
-    if (text !== message.content.trim()) onEdit(text);
+    if (text !== content.trim()) onEdit(text);
   };
 
   return (
@@ -128,14 +132,18 @@ function UserTurn({ message, busy, onEdit, onResend }) {
         </div>
       ) : (
         <>
-          <div className="turn-body" dir="auto">{message.content}</div>
+          <div className="turn-body" dir="auto">
+            {message.image && <img className="turn-photo" src={message.image} alt="Your photo" />}
+            {!message.image && hadPhoto && <span className="photo-chip"><ImageIcon size={13} /> Photo</span>}
+            {content}
+          </div>
           <div className="prompt-tools" role="toolbar" aria-label="Question tools">
             <button className="icon-btn" type="button" title={t("copy")} aria-label="Copy question"
-              onClick={() => navigator.clipboard.writeText(message.content).then(() => notify(t("copied")))}><Copy size={14} /></button>
+              onClick={() => navigator.clipboard.writeText(content).then(() => notify(t("copied")))}><Copy size={14} /></button>
             <button className="icon-btn" type="button" title="Edit question" aria-label="Edit question"
               disabled={busy || message.id == null} onClick={startEdit}><Pencil size={14} /></button>
             <button className="icon-btn" type="button" title="Ask again" aria-label="Ask this question again"
-              disabled={busy} onClick={() => onResend(message.content)}><RotateCcw size={14} /></button>
+              disabled={busy} onClick={() => onResend(content, message.image)}><RotateCcw size={14} /></button>
           </div>
         </>
       )}
@@ -259,6 +267,7 @@ export default function Chat({ mode }) {
   const [listening, setListening] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [photo, setPhoto] = useState(null); // { dataUrl, name }
 
   const threadRef = useRef(null);
   const textareaRef = useRef(null);
@@ -325,13 +334,15 @@ export default function Chat({ mode }) {
     return next;
   });
 
-  const send = useCallback(async (raw) => {
+  const send = useCallback(async (raw, image = null) => {
     const text = raw.trim();
-    if (!text || controllerRef.current) return;
+    if ((!text && !image) || controllerRef.current) return;
     stopSpeaking();
     setInput("");
+    setPhoto(null);
     stickRef.current = true;
-    setMessages((list) => [...list, { role: "user", content: text }, { role: "assistant", content: "", pending: true, question: text }]);
+    setMessages((list) => [...list, { role: "user", content: text || "(photo)", image },
+      { role: "assistant", content: "", pending: true, question: text }]);
 
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -345,7 +356,7 @@ export default function Chat({ mode }) {
 
     try {
       await streamChat({
-        message: text, mode, subject: mode === "subject" ? slug : undefined,
+        message: text, image: image || undefined, mode, subject: mode === "subject" ? slug : undefined,
         language: lang, conversation_id: conversationId || createdIdRef.current || null,
       }, (event) => {
         if (event.type === "start") {
@@ -382,6 +393,7 @@ export default function Chat({ mode }) {
       } else {
         setMessages((list) => list.slice(0, -2));
         setInput(text);
+        if (image) setPhoto({ dataUrl: image, name: "photo" });
         notify(err.message, { kind: "error" });
       }
     } finally {
@@ -465,7 +477,17 @@ export default function Chat({ mode }) {
       }
     }
     setMessages((list) => list.slice(0, index));
-    send(text);
+    send(text, message?.image);
+  };
+
+  const attachPhoto = async (file) => {
+    if (!file) return;
+    try {
+      setPhoto(await preparePhoto(file));
+      textareaRef.current?.focus();
+    } catch (err) {
+      notify(err.message, { kind: "error" });
+    }
   };
 
   const copyDraft = () => navigator.clipboard.writeText(input).then(() => notify(t("copied")));
@@ -564,17 +586,33 @@ export default function Chat({ mode }) {
               </button>
             </div>
           )}
-          <form className="composer-box" onSubmit={(e) => { e.preventDefault(); if (busy) controllerRef.current?.abort(); else send(input); }}>
+          <form className="composer-box" onSubmit={(e) => { e.preventDefault(); if (busy) controllerRef.current?.abort(); else send(input, photo?.dataUrl); }}>
+            {photo && (
+              <div className="photo-preview">
+                <img src={photo.dataUrl} alt="Photo to send" />
+                <span className="small">{app.ai_enabled ? "The tutor will look at this photo." : "Photos need the AI tutor, which is off right now."}</span>
+                <button className="icon-btn" type="button" aria-label="Remove photo" onClick={() => setPhoto(null)}><X size={14} /></button>
+              </div>
+            )}
             <label className="sr-only" htmlFor="composer-input">{t("ask_placeholder")}</label>
             <textarea id="composer-input" ref={textareaRef} rows={1} dir="auto" maxLength={2000}
               placeholder={listening ? t("listening") : t("ask_placeholder")} value={input}
               onChange={(e) => setInput(e.target.value)}
+              onPaste={(e) => {
+                const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith("image/"));
+                if (file) { e.preventDefault(); attachPhoto(file); }
+              }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(input); }
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(input, photo?.dataUrl); }
               }} />
             <div className="composer-tools">
               <button className={`icon-btn bordered mic${listening ? " listening" : ""}`} type="button" onClick={toggleMic}
                 aria-label={t("voice_input")} title={t("voice_input")} aria-pressed={listening}><Mic size={16} /></button>
+              <label className="icon-btn bordered photo-btn" title="Ask about a photo, for example a textbook problem">
+                <ImagePlus size={16} />
+                <span className="sr-only">Add a photo</span>
+                <input type="file" accept="image/*" hidden onChange={(e) => { attachPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+              </label>
               {input && (
                 <>
                   <button className="icon-btn bordered" type="button" onClick={copyDraft} aria-label="Copy what you typed" title={t("copy")}>
@@ -586,7 +624,7 @@ export default function Chat({ mode }) {
               )}
               <span className="spacer" />
               <span className="hint">{input.length > 1500 ? `${input.length} / 2000` : t("enter_to_send")}</span>
-              <button className="btn btn-sm" type="submit" disabled={!busy && !input.trim()} aria-label={busy ? t("stop") : t("send")}>
+              <button className="btn btn-sm" type="submit" disabled={!busy && !input.trim() && !photo} aria-label={busy ? t("stop") : t("send")}>
                 {busy ? <><Square size={13} /> {t("stop")}</> : <><ArrowUp size={15} /> {t("send")}</>}
               </button>
             </div>

@@ -66,3 +66,14 @@ const CORE_ROWS = {
 for (const [code, values] of Object.entries(CORE_ROWS)) {
   EXTRA_STRINGS[code] = Object.fromEntries(CORE.map((key, i) => [key, values[i]]));
 }
+
+// 2.6: review deck and teacher assignments.
+const NAV_26 = {
+  en: ["Review deck", "Assignments"], hi: ["दोहराई डेक", "असाइनमेंट"], bn: ["পুনরালোচনা", "অ্যাসাইনমেন্ট"], mr: ["उजळणी", "गृहपाठ"],
+  te: ["పునశ్చరణ", "అసైన్‌మెంట్లు"], ta: ["மறுபார்வை", "ஒப்படைப்புகள்"], gu: ["પુનરાવર્તન", "સોંપણી"], kn: ["ಪುನರಾವರ್ತನೆ", "ಅಸೈನ್‌ಮೆಂಟ್‌ಗಳು"],
+  ml: ["പുനരവലോകനം", "അസൈൻമെന്റുകൾ"], pa: ["ਦੁਹਰਾਈ", "ਅਸਾਈਨਮੈਂਟ"], or: ["ପୁନରାବୃତ୍ତି", "ଆସାଇନମେଣ୍ଟ"], as: ["পুনৰীক্ষণ", "এছাইনমেণ্ট"],
+  ur: ["دہرائی", "اسائنمنٹس"], ne: ["दोहोर्याइ", "असाइनमेन्ट"], sa: ["पुनरावृत्तिः", "गृहकार्याणि"], gom: ["उजळणी", "असायनमेंट"],
+};
+for (const [code, [review, assignments]] of Object.entries(NAV_26)) {
+  EXTRA_STRINGS[code] = { ...EXTRA_STRINGS[code], nav_review: review, nav_assignments: assignments };
+}

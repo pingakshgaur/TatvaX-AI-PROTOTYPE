@@ -20,6 +20,10 @@ const LibraryDocument = named(loadLibrary, "LibraryDocument");
 const LibraryIndex = named(loadLibrary, "LibraryIndex");
 const PrintAssessment = named(loadPrint, "PrintAssessment");
 const PrintNotes = named(loadPrint, "PrintNotes");
+const PrintMyReport = named(loadPrint, "PrintMyReport");
+const PrintStudentReport = named(loadPrint, "PrintStudentReport");
+const Review = lazy(() => import("./pages/Review.jsx"));
+const AssignmentsPage = lazy(() => import("./pages/Assignments.jsx"));
 const Progress = lazy(() => import("./pages/Progress.jsx"));
 const Subjects = lazy(() => import("./pages/Subjects.jsx"));
 const TeacherConsole = lazy(() => import("./pages/Teacher.jsx"));
@@ -31,7 +35,7 @@ const Translate = lazy(() => import("./pages/Translate.jsx"));
 if (typeof window !== "undefined") {
   const warm = () => [loadHistory, loadLibrary, () => import("./pages/Chat.jsx"), () => import("./pages/Subjects.jsx"),
     () => import("./pages/Assessments.jsx"), () => import("./pages/Todos.jsx"), () => import("./pages/Translate.jsx"),
-    () => import("./pages/Progress.jsx"), () => import("./components/MarkdownView.jsx")].forEach((load) => load().catch(() => {}));
+    () => import("./pages/Progress.jsx"), () => import("./pages/Review.jsx"), () => import("./pages/Assignments.jsx"), () => import("./components/MarkdownView.jsx")].forEach((load) => load().catch(() => {}));
   window.addEventListener("load", () => (window.requestIdleCallback || ((fn) => setTimeout(fn, 2500)))(warm), { once: true });
 }
 
@@ -58,6 +62,8 @@ function Routed() {
     <Routes>
       <Route path="print/notes/:slug" element={<Suspense fallback={<Loading />}><PrintNotes /></Suspense>} />
       <Route path="print/assessment/:id" element={<Suspense fallback={<Loading />}><PrintAssessment /></Suspense>} />
+      <Route path="print/report" element={<Suspense fallback={<Loading />}><PrintMyReport /></Suspense>} />
+      <Route path="print/student/:id" element={<Suspense fallback={<Loading />}><PrintStudentReport /></Suspense>} />
       <Route element={<Shell />}>
         <Route index element={<Overview />} />
         <Route path="subjects" element={<Subjects />} />
@@ -76,6 +82,8 @@ function Routed() {
         <Route path="progress" element={<Progress />} />
         <Route path="translate" element={<Translate />} />
         <Route path="todos" element={<Todos />} />
+        <Route path="review" element={<Review />} />
+        <Route path="assignments" element={<AssignmentsPage />} />
         <Route path="teacher" element={<TeacherConsole />} />
         <Route path="teacher/:tab" element={<TeacherConsole />} />
         <Route path="teacher/:tab/:slug" element={<TeacherConsole />} />

@@ -16,7 +16,7 @@ from .security import limiter, require_json_for_writes
 from .translation import Translator
 from .tutor import Tutor
 
-__version__ = "2.5.1"
+__version__ = "2.6.0"
 
 
 @dataclass
@@ -79,6 +79,9 @@ def create_app(overrides: dict | None = None) -> Flask:
         imported = knowledge.seed_documents(conn, app.config["CONTENT_DIR"])
         if imported:
             app.logger.info("Imported %d documents into the content library", imported)
+        added = review.backfill(conn)
+        if added:
+            app.logger.info("Added %d past mistakes to learners' review decks", added)
     finally:
         conn.close()
 

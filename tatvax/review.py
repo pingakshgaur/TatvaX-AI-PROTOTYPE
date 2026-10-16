@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from flask import Blueprint, request
 
 from . import gamification
-from .db import get_db, now_iso, today
+from .db import get_db, get_setting, now_iso, set_setting, today
 from .security import error
 from .users import current_user
 
@@ -44,6 +44,21 @@ def add_missed(conn, user_id: int, questions: list[dict], answers: dict) -> int:
             (user_id, _fingerprint(q["question"]), q.get("subject"), json.dumps(card, ensure_ascii=False), today(), now_iso()),
         )
         added += cur.rowcount
+    return added
+
+
+def backfill(conn) -> int:
+    """Once, on upgrading to 2.6: add the mistakes from assessments finished before the review deck existed."""
+    if get_setting(conn, "review_backfilled") == "1":
+        return 0
+    added = 0
+    for quiz in conn.execute("SELECT user_id, questions_json, answers_json FROM quizzes WHERE completed_at IS NOT NULL").fetchall():
+        try:
+            added += add_missed(conn, quiz["user_id"], json.loads(quiz["questions_json"]), json.loads(quiz["answers_json"] or "{}"))
+        except (ValueError, KeyError, TypeError):
+            continue
+    set_setting(conn, "review_backfilled", "1")
+    conn.commit()
     return added
 
 

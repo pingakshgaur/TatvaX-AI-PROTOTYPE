@@ -259,3 +259,118 @@ export function PrintAssessment() {
     </div>
   );
 }
+
+// ------------------------------------------------------------------ progress report
+
+const pct = (n, d) => (d ? Math.round((100 * n) / d) : 0);
+
+function ProgressReport({ report, forTeacher }) {
+  const r = report;
+  const maxDay = Math.max(1, ...r.activity.map((d) => d.questions + d.quizzes));
+  const accuracy = pct(r.totals.correct, r.totals.answered);
+  return (
+    <article className="print-doc">
+      <Cover kind="Progress report" title={r.student.name} subtitle={forTeacher ? "Learning summary for parents and teachers" : "My learning summary"}
+        tone="#0f5a57"
+        rows={[["Class", r.student.grade ? `Class ${r.student.grade}` : null], ["Level", `${r.level} (${r.xp} XP)`],
+          ["Streak", `${r.streak.current} days (best ${r.streak.best})`], ["Learning since", longDate(r.student.joined)],
+          ["Report date", longDate(`${r.generated}T12:00:00`)]]} />
+
+      <section className="pd-report">
+        <h2>At a glance</h2>
+        <dl className="pd-facts four">
+          <div><dt>Questions asked</dt><dd>{r.totals.questions}</dd></div>
+          <div><dt>Assessments</dt><dd>{r.totals.assessments}</dd></div>
+          <div><dt>Average score</dt><dd>{r.totals.average != null ? `${r.totals.average}%` : "—"}</dd></div>
+          <div><dt>Answers correct</dt><dd>{r.totals.answered ? `${accuracy}%` : "—"}</dd></div>
+          <div><dt>Active days (30)</dt><dd>{r.totals.active_days}</dd></div>
+          <div><dt>Badges</dt><dd>{r.badges.length}/{r.badges_total}</dd></div>
+          <div><dt>Review deck</dt><dd>{r.review.mastered}/{r.review.total} mastered</dd></div>
+          <div><dt>Assignments</dt><dd>{r.totals.assigned ? `${r.totals.assigned_done}/${r.totals.assigned}` : "—"}</dd></div>
+        </dl>
+        {(r.strongest || r.needs_work) && (
+          <p className="pd-note">
+            {r.strongest && <>Strongest subject: <b>{r.strongest}</b>. </>}
+            {r.needs_work && <>Most room to grow: <b>{r.needs_work}</b>, so extra practice there will help most.</>}
+          </p>
+        )}
+
+        <h3 className="pd-h3">Activity over the last 30 days</h3>
+        <div className="pd-activity" aria-label="Activity per day">
+          {r.activity.map((d) => (
+            <span key={d.day} title={`${d.day}: ${d.questions} questions, ${d.quizzes} assessments`}>
+              <i style={{ height: `${((d.questions + d.quizzes) / maxDay) * 100}%` }} />
+            </span>
+          ))}
+        </div>
+        <div className="pd-activity-axis"><span>{r.activity[0].day}</span><span>{r.activity[r.activity.length - 1].day}</span></div>
+
+        <h3 className="pd-h3">Subjects</h3>
+        <table className="pd-table">
+          <thead><tr><th>Subject</th><th>Questions</th><th>Assessments</th><th>Average</th><th>Best</th><th>To review</th></tr></thead>
+          <tbody>
+            {r.subjects.map((s) => (
+              <tr key={s.slug}>
+                <td><span className="pd-dot" style={{ background: s.color }} />{s.title}</td>
+                <td>{s.questions}</td><td>{s.assessments}</td>
+                <td>{s.average != null ? <><span className="pd-bar"><span style={{ width: `${s.average}%`, background: s.color }} /></span>{s.average}%</> : "—"}</td>
+                <td>{s.best != null ? `${s.best}%` : "—"}</td><td>{s.to_review}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      {r.recent.length > 0 && (
+        <section className="pd-report">
+          <h2>Recent assessments</h2>
+          <table className="pd-table">
+            <thead><tr><th>Date</th><th>Subject</th><th>Mode</th><th>Score</th></tr></thead>
+            <tbody>
+              {r.recent.map((q) => (
+                <tr key={q.id}>
+                  <td>{new Date(q.completed_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</td>
+                  <td>{q.subject}{q.topic ? `: ${q.topic}` : ""}</td>
+                  <td style={{ textTransform: "capitalize" }}>{q.mode}</td>
+                  <td><b>{q.score}/{q.total}</b> ({pct(q.score, q.total)}%)</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {r.badges.length > 0 && (
+        <section className="pd-report">
+          <h2>Badges earned</h2>
+          <ul className="pd-badges">{r.badges.map((b) => <li key={b.id}><b>{b.name}</b><span>{b.description}</span></li>)}</ul>
+        </section>
+      )}
+      <Footer />
+    </article>
+  );
+}
+
+function ReportPage({ path, forTeacher }) {
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => { api(path).then((res) => setReport(res.report)).catch((err) => setError(err.message)); }, [path]);
+  usePrintOnce(Boolean(report), report ? `${report.student.name} - Progress report - TatvaX` : "TatvaX");
+  if (error) return <div className="print-error">{error}</div>;
+  if (!report) return <Loading label="Preparing the report" />;
+  return (
+    <div className="print-page">
+      <Toolbar />
+      <ProgressReport report={report} forTeacher={forTeacher} />
+    </div>
+  );
+}
+
+export function PrintMyReport() {
+  return <ReportPage path="/api/report" />;
+}
+
+export function PrintStudentReport() {
+  const { id } = useParams();
+  return <ReportPage path={`/api/admin/students/${id}/report`} forTeacher />;
+}
