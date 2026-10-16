@@ -1,12 +1,12 @@
-import { CheckCircle2, ChevronRight, ClipboardCheck, Lightbulb, MessageSquareText, Search, Sigma, Star } from "lucide-react";
+import { CheckCircle2, ChevronRight, ClipboardCheck, FileDown, Lightbulb, MessageSquareText, Search, Sigma, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
+import SubjectArt from "../components/SubjectArt.jsx";
 import { EmptyState, Loading, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
-import { subjectCode } from "../lib/format.js";
 
 function NotesSearch({ subject }) {
   const { t } = useApp();
@@ -69,7 +69,7 @@ export function LibraryIndex() {
         <Panel tight title="Collections">
           {documents.map((d) => (
             <Link key={d.slug} className="list-row" to={`/notes/${d.slug}`}>
-              <span className="subject-code" style={{ "--subject-color": d.color }}>{d.kind === "helpdesk" ? "HLP" : subjectCode(d.title)}</span>
+              <SubjectArt subject={d} size={42} />
               <span className="grow">
                 <span className="title">{d.title}</span>
                 <span className="desc" style={{ display: "block" }}>{d.description}</span>
@@ -85,14 +85,14 @@ export function LibraryIndex() {
 }
 
 const CHAPTER_TONES = ["var(--c-teal)", "var(--c-indigo)", "var(--c-coral)", "var(--c-leaf)", "var(--c-plum)", "var(--c-saffron)"];
-const CALLOUTS = [
+export const CALLOUTS = [
   [/^(Examples?|Solve|Answer|To solve)\s*:/i, "example", Lightbulb],
   [/^(Remember|Note|Important|Tip)\s*:/i, "note", Star],
   [/^(Symbol|Formula|Formulas)\s*:/i, "formula", Sigma],
 ];
 
 // Split a document into chapters ("## ...") and topics ("### ..." or a "**Topic**" line).
-function parseNotes(body) {
+export function parseNotes(body) {
   const chapters = [];
   let chapter = null;
   let topic = null;
@@ -118,7 +118,7 @@ function parseNotes(body) {
 }
 
 // Group a topic's lines into plain Markdown and coloured callouts.
-function segments(lines) {
+export function segments(lines) {
   const out = [];
   let current = null;
   for (const line of lines) {
@@ -151,7 +151,7 @@ function loadRead(slug) {
 function Topic({ topic, docSlug, kind }) {
   const { t } = useApp();
   const askHref = kind === "helpdesk"
-    ? `/helpdesk?q=${encodeURIComponent(`Tell me about ${topic.title}`)}`
+    ? `/tatvai?q=${encodeURIComponent(`Tell me about ${topic.title}`)}`
     : `/learn/${docSlug}?q=${encodeURIComponent(`Explain ${topic.title} with an example`)}`;
   return (
     <div className="topic-card" data-topic={topic.title.toLowerCase()}>
@@ -239,7 +239,7 @@ export function LibraryDocument() {
   if (error) return <EmptyState title="Notes not found" action={<Link className="btn" to="/notes">{t("library_title")}</Link>}>{error}</EmptyState>;
   if (!doc) return <Loading />;
 
-  const tutorLink = doc.kind === "helpdesk" ? "/helpdesk" : `/learn/${doc.slug}`;
+  const tutorLink = doc.kind === "helpdesk" ? "/tatvai" : `/learn/${doc.slug}`;
   const readCount = chapters.filter((c, i) => read.has(`ch-${i}`)).length;
 
   return (
@@ -249,6 +249,7 @@ export function LibraryDocument() {
         actions={<>
           <Link className="btn" to={tutorLink}><MessageSquareText size={15} /> {t("ask_about")}</Link>
           {doc.kind === "subject" && <Link className="btn btn-secondary" to={`/assessments/${doc.slug}`}><ClipboardCheck size={15} /> {t("nav_quiz")}</Link>}
+          <a className="btn btn-ghost" href={`/print/notes/${doc.slug}`} target="_blank" rel="noopener"><FileDown size={15} /> Export PDF</a>
         </>} />
       <div className="reader-layout">
         <nav className="toc" aria-label={t("contents")}>

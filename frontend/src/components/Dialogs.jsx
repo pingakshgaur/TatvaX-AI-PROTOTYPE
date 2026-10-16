@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react";
+import { Languages, LogOut, MessageSquareText, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { applyTheme, useApp } from "../context/AppContext.jsx";
@@ -99,12 +99,12 @@ function RegisterForm({ onDone }) {
   );
 }
 
-function SettingsForm({ onDone }) {
-  const { t, user, setUser, notify } = useApp();
+function SettingsForm({ onDone, onFeedback }) {
+  const { t, app, user, setUser, notify, lang, setLang, sound, setSound } = useApp();
   const [theme, setTheme] = useState(currentTheme(user));
   const registered = user && !user.is_guest;
   const { error, busy, submit } = useSubmit(async (data) => {
-    const body = { grade: data.grade ? Number(data.grade) : null, theme };
+    const body = { grade: data.grade ? Number(data.grade) : null, theme, daily_goal: Number(data.daily_goal) || 5 };
     if (registered) {
       body.name = data.name;
       body.leaderboard = Boolean(data.leaderboard);
@@ -122,6 +122,13 @@ function SettingsForm({ onDone }) {
   };
   return (
     <form onSubmit={submit} noValidate>
+      <div className="field settings-language">
+        <label className="label" htmlFor="set-language"><Languages size={14} /> {t("language")}</label>
+        <select className="select" id="set-language" value={lang} onChange={(e) => setLang(e.target.value)}>
+          {app.languages.map((l) => <option key={l.code} value={l.code}>{l.native}{l.code !== "en" ? ` (${l.name})` : ""}</option>)}
+        </select>
+        <span className="hint">TatvaX, its tutor and your assessments use this language. It changes straight away.</span>
+      </div>
       {registered && (
         <div className="field"><label className="label" htmlFor="set-name">{t("name")}</label>
           <input className="input" id="set-name" name="name" defaultValue={user.name} maxLength={40} /></div>
@@ -132,7 +139,22 @@ function SettingsForm({ onDone }) {
           {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => <option key={g} value={g}>Class {g}</option>)}
         </select>
         <span className="hint">The tutor adjusts its explanations to your class.</span></div>
+      <div className="field"><label className="label" htmlFor="set-goal">Daily learning goal</label>
+        <select className="select" id="set-goal" name="daily_goal" defaultValue={user?.daily_goal ?? 5}>
+          {[1, 2, 3, 5, 8, 10, 15, 20, 30].map((n) => <option key={n} value={n}>{n} activit{n === 1 ? "y" : "ies"} a day</option>)}
+        </select>
+        <span className="hint">Questions asked and assessments finished count towards it.</span></div>
       <div className="field"><span className="label">{t("theme")}</span><ThemePicker value={theme} onChange={setTheme} /></div>
+      <div className="field settings-toggles">
+        <button type="button" className="btn btn-secondary btn-sm" aria-pressed={sound} onClick={() => setSound(!sound)}>
+          {sound ? <Volume2 size={15} /> : <VolumeX size={15} />} Celebration sounds: {sound ? "on" : "off"}
+        </button>
+        {onFeedback && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { onDone(); onFeedback(); }}>
+            <MessageSquareText size={15} /> Send feedback
+          </button>
+        )}
+      </div>
       {registered && (
         <label className="field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <input type="checkbox" name="leaderboard" defaultChecked={user.leaderboard} />
@@ -148,7 +170,7 @@ function SettingsForm({ onDone }) {
   );
 }
 
-export function AccountDialog({ open, onClose, initialTab }) {
+export function AccountDialog({ open, onClose, initialTab, onFeedback }) {
   const { t, user } = useApp();
   const registered = user && !user.is_guest;
   const tabs = registered ? ["settings"] : ["login", "register", "settings"];
@@ -170,7 +192,7 @@ export function AccountDialog({ open, onClose, initialTab }) {
       )}
       {tab === "login" && <SignInForm onDone={onClose} />}
       {tab === "register" && <RegisterForm onDone={onClose} />}
-      {tab === "settings" && <SettingsForm onDone={onClose} />}
+      {tab === "settings" && <SettingsForm onDone={onClose} onFeedback={onFeedback} />}
     </Dialog>
   );
 }

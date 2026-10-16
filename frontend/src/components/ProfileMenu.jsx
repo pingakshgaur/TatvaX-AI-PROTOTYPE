@@ -1,23 +1,12 @@
-// The student's avatar in the top bar: level ring, streak, and a menu with their account,
-// progress, achievements, daily goal, theme, sound and sign-out.
-import {
-  Award, BarChart3, Flame, Languages, LogIn, LogOut, MessageSquareText, Minus, Plus, Settings, Trophy, UserPlus,
-  Volume2, VolumeX,
-} from "lucide-react";
+// The student's avatar in the top bar: level ring and streak, opening a short menu with
+// their level, today's goal, a glance at their to-do list, settings, progress and sign-out.
+import { ArrowRight, BarChart3, Check, Flame, ListChecks, LogIn, LogOut, Plus, Settings, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-import { applyTheme, useApp } from "../context/AppContext.jsx";
+import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
 import { formatNumber } from "../lib/format.js";
-
-const THEMES = [
-  ["system", "linear-gradient(135deg, #f5f3ee 50%, #161a1d 50%)"],
-  ["light", "#f5f3ee"],
-  ["dark", "#161a1d"],
-  ["warm", "#f3ecdf"],
-  ["contrast", "#000000"],
-];
 
 function AvatarRing({ progress = 0, initial }) {
   const r = 15;
@@ -39,21 +28,29 @@ function AvatarRing({ progress = 0, initial }) {
   );
 }
 
-export default function ProfileMenu({ onAccount, onFeedback }) {
-  const { user, setUser, notify, t, sound, setSound, progressVersion } = useApp();
+export default function ProfileMenu({ onAccount }) {
+  const { user, setUser, notify, t, progressVersion } = useApp();
   const [open, setOpen] = useState(false);
   const [stats, setStats] = useState(null);
+  const [todos, setTodos] = useState(null);
+  const [quick, setQuick] = useState("");
   const ref = useRef(null);
   const location = useLocation();
   const registered = user && !user.is_guest;
   const initial = registered ? user.name.trim().charAt(0).toUpperCase() : "G";
-  const theme = user?.theme || (() => { try { return localStorage.getItem("tatvax.theme"); } catch { return null; } })() || "system";
 
   useEffect(() => {
     let live = true;
     api("/api/progress").then((res) => live && setStats(res.progress)).catch(() => {});
     return () => { live = false; };
   }, [user?.id, progressVersion, open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    let live = true;
+    api("/api/todos").then((res) => live && setTodos(res.todos)).catch(() => live && setTodos([]));
+    return () => { live = false; };
+  }, [open, user?.id]);
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
@@ -69,23 +66,6 @@ export default function ProfileMenu({ onAccount, onFeedback }) {
     };
   }, [open]);
 
-  const patch = async (body) => {
-    try {
-      const res = await api("/api/me", { method: "PATCH", body });
-      setUser(res.user);
-      return res.user;
-    } catch (err) {
-      notify(err.message, { kind: "error" });
-      return null;
-    }
-  };
-
-  const changeGoal = async (delta) => {
-    const goal = Math.max(1, Math.min(50, (stats?.goal.goal ?? 5) + delta));
-    setStats((s) => (s ? { ...s, goal: { ...s.goal, goal, complete: s.goal.done >= goal } } : s));
-    await patch({ daily_goal: goal });
-  };
-
   const signOut = async () => {
     await api("/api/auth/logout", { method: "POST", body: {} });
     setUser(null);
@@ -93,12 +73,37 @@ export default function ProfileMenu({ onAccount, onFeedback }) {
     notify("Signed out");
   };
 
+  // Ticked tasks stay in the panel, struck through, until the menu is opened again.
+  const toggleTodo = async (todo) => {
+    setTodos((list) => list.map((x) => (x.id === todo.id ? { ...x, done: !x.done, touched: true } : x)));
+    try {
+      await api(`/api/todos/${todo.id}`, { method: "PATCH", body: { done: !todo.done } });
+    } catch (err) {
+      notify(err.message, { kind: "error" });
+    }
+  };
+
+  const addQuick = async (event) => {
+    event.preventDefault();
+    if (!quick.trim()) return;
+    try {
+      const { todo } = await api("/api/todos", { method: "POST", body: { title: quick.trim() } });
+      setTodos((list) => [todo, ...(list || [])]);
+      setQuick("");
+    } catch (err) {
+      notify(err.message, { kind: "error" });
+    }
+  };
+
   const level = stats?.level ?? user?.level ?? 1;
   const xp = stats?.xp ?? user?.xp ?? 0;
   const progress = stats?.progress ?? user?.progress ?? 0;
   const streak = stats?.streak.current ?? 0;
-  const earned = stats ? stats.badges.filter((b) => b.earned).length : 0;
   const goal = stats?.goal ?? { done: 0, goal: user?.daily_goal ?? 5 };
+  const listed = (todos || []).filter((x) => !x.done || x.touched);
+  const openCount = (todos || []).filter((x) => !x.done).length;
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const close = () => setOpen(false);
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -116,80 +121,75 @@ export default function ProfileMenu({ onAccount, onFeedback }) {
               <AvatarRing progress={progress} initial={initial} />
               <div>
                 <strong>{registered ? user.name : t("guest")}</strong>
-                <span className="sub">{t("level")} {level}{user?.grade ? ` · Class ${user.grade}` : ""}{user?.role === "teacher" ? " · Teacher" : ""}</span>
+                <span className="sub">
+                  {t("level")} {level}{user?.grade ? ` · Class ${user.grade}` : ""}{user?.role === "teacher" ? " · Teacher" : ""}
+                  {streak > 0 ? ` · ${streak} day streak` : ""}
+                </span>
               </div>
             </div>
             <div className="xp-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-label="XP to next level">
               <span style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
-            <span className="sub">{formatNumber(xp)} XP · {formatNumber((stats?.next_level_xp ?? 100) - xp)} XP to level {level + 1}</span>
+            <span className="sub pm-line">
+              <span>{formatNumber(xp)} XP · {formatNumber((stats?.next_level_xp ?? 100) - xp)} to level {level + 1}</span>
+              <span className={goal.done >= goal.goal ? "goal-done" : ""}>Daily goal {Math.min(goal.done, goal.goal)}/{goal.goal}</span>
+            </span>
           </div>
 
-          <div className="profile-stats">
-            <div><b style={{ color: "var(--c-coral)" }}>{streak}</b><span>Day streak</span></div>
-            <div><b style={{ color: "var(--c-plum)" }}>{earned}</b><span>Badges</span></div>
-            <div><b style={{ color: "var(--c-indigo)" }}>{stats?.rank ? `#${stats.rank}` : "—"}</b><span>This week</span></div>
-          </div>
-
-          <div className="goal-row">
-            <div className="goal-top">
-              <span><b>Daily goal</b> · {Math.min(goal.done, goal.goal)}/{goal.goal} activities</span>
-              <span className="stepper">
-                <button type="button" aria-label="Lower daily goal" onClick={() => changeGoal(-1)}><Minus size={12} /></button>
-                <button type="button" aria-label="Raise daily goal" onClick={() => changeGoal(1)}><Plus size={12} /></button>
-              </span>
+          <section className="pm-todos" aria-label="To-do list">
+            <div className="pm-todos-head">
+              <span className="eyebrow"><ListChecks size={13} /> To-do</span>
+              <span className="small muted">{todos ? `${openCount} open` : ""}</span>
             </div>
-            <div className="goal-bar"><span style={{ width: `${Math.min(100, (goal.done / goal.goal) * 100)}%` }} /></div>
-          </div>
+            {todos === null ? <span className="spinner" aria-label="Loading" /> : (
+              <ul>
+                {listed.slice(0, 4).map((todo) => (
+                  <li key={todo.id}>
+                    <button type="button" className="check sm" role="checkbox" aria-checked={todo.done}
+                      aria-label={`Mark ${todo.title} as ${todo.done ? "not done" : "done"}`} onClick={() => toggleTodo(todo)}>
+                      {todo.done && <Check size={11} />}
+                    </button>
+                    <span className={todo.done ? "struck" : ""}>{todo.title}</span>
+                    {todo.due_date && !todo.done && (
+                      <span className={`due ${todo.due_date < today ? "overdue" : todo.due_date === today ? "today" : ""}`}>
+                        {todo.due_date === today ? "Today" : new Date(`${todo.due_date}T00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                      </span>
+                    )}
+                  </li>
+                ))}
+                {listed.length === 0 && <li className="small muted">Nothing on your list. Add a task below.</li>}
+              </ul>
+            )}
+            <form className="pm-quick" onSubmit={addQuick}>
+              <label className="sr-only" htmlFor="pm-quick">Quick task</label>
+              <input id="pm-quick" value={quick} maxLength={200} placeholder="Quick add a task" onChange={(e) => setQuick(e.target.value)} />
+              <button type="submit" className="icon-btn" aria-label="Add task" disabled={!quick.trim()}><Plus size={15} /></button>
+            </form>
+            <Link to="/todos" className="pm-open" role="menuitem" onClick={close}>
+              Open to-do list{todos && todos.length ? ` (${todos.length})` : ""} <ArrowRight size={14} />
+            </Link>
+          </section>
 
           <div className="menu-list">
-            {registered ? (
-              <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onAccount("settings"); }}>
-                <span className="mi-icon" style={{ background: "var(--c-teal)" }}><Settings size={16} /></span> My account
-              </button>
-            ) : (
+            {!registered && (
               <>
-                <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onAccount("register"); }}>
+                <button type="button" className="menu-item" role="menuitem" onClick={() => { close(); onAccount("register"); }}>
                   <span className="mi-icon" style={{ background: "var(--c-teal)" }}><UserPlus size={16} /></span> Create a free account
                   <span className="mi-meta">Save progress</span>
                 </button>
-                <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onAccount("login"); }}>
+                <button type="button" className="menu-item" role="menuitem" onClick={() => { close(); onAccount("login"); }}>
                   <span className="mi-icon" style={{ background: "var(--c-indigo)" }}><LogIn size={16} /></span> Sign in
                 </button>
               </>
             )}
+            <button type="button" className="menu-item" role="menuitem" onClick={() => { close(); onAccount("settings"); }}>
+              <span className="mi-icon" style={{ background: "var(--c-plum)" }}><Settings size={16} /></span> Settings
+              <span className="mi-meta">Language, theme, goal</span>
+            </button>
             <Link to="/progress" className="menu-item" role="menuitem">
-              <span className="mi-icon" style={{ background: "var(--c-indigo)" }}><BarChart3 size={16} /></span> My progress
+              <span className="mi-icon" style={{ background: "var(--c-saffron)" }}><BarChart3 size={16} /></span> My progress
+              <span className="mi-meta">Badges, leaderboard</span>
             </Link>
-            <Link to="/progress#achievements" className="menu-item" role="menuitem">
-              <span className="mi-icon" style={{ background: "var(--c-plum)" }}><Award size={16} /></span> Achievements
-              <span className="mi-meta">{earned}/{stats?.badges.length ?? 13}</span>
-            </Link>
-            <Link to="/progress#leaderboard" className="menu-item" role="menuitem">
-              <span className="mi-icon" style={{ background: "var(--c-saffron)" }}><Trophy size={16} /></span> Leaderboard
-              <span className="mi-meta">{stats?.rank ? `Rank #${stats.rank}` : ""}</span>
-            </Link>
-            <Link to="/translate" className="menu-item" role="menuitem">
-              <span className="mi-icon" style={{ background: "var(--c-leaf)" }}><Languages size={16} /></span> Translator
-              <span className="mi-meta"><kbd>Ctrl K</kbd></span>
-            </Link>
-            <div className="menu-sep" />
-            <div className="menu-item" style={{ cursor: "default" }}>
-              <span>Theme</span>
-              <span className="theme-dots" role="group" aria-label="Theme">
-                {THEMES.map(([name, swatch]) => (
-                  <button key={name} type="button" aria-label={t(`theme_${name}`)} title={t(`theme_${name}`)} aria-pressed={theme === name}
-                    style={{ background: swatch }} onClick={() => { applyTheme(name); if (user) patch({ theme: name }); }} />
-                ))}
-              </span>
-            </div>
-            <button type="button" className="menu-item" role="menuitemcheckbox" aria-checked={sound} onClick={() => setSound(!sound)}>
-              {sound ? <Volume2 size={16} /> : <VolumeX size={16} />} Celebration sounds
-              <span className="mi-meta">{sound ? "On" : "Off"}</span>
-            </button>
-            <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onFeedback(); }}>
-              <MessageSquareText size={16} /> Send feedback
-            </button>
             {registered && (
               <>
                 <div className="menu-sep" />

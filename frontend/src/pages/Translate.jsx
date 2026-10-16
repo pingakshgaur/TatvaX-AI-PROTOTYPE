@@ -11,7 +11,6 @@ import { canListen, listen, speak } from "../lib/voice.js";
 
 const MAX = 3000;
 const HISTORY_KEY = "tatvax.translations";
-const QUICK = ["en", "hi", "bn", "ta", "te", "mr"];
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
@@ -94,18 +93,18 @@ export default function Translate() {
   };
 
   const detected = source === "auto" && result?.source ? languageInfo(result.source) : null;
+  // Every language is listed on both sides, in two rows of chips.
   const chips = (value, onPick, includeAuto) => (
-    <>
-      {includeAuto && <button type="button" className="lang-chip" aria-pressed={value === "auto"} onClick={() => onPick("auto")}>Detect</button>}
-      {QUICK.map((code) => (
-        <button key={code} type="button" className="lang-chip" aria-pressed={value === code} onClick={() => onPick(code)}>{languageInfo(code).native}</button>
+    <div className="lang-grid" role="group" aria-label={includeAuto ? "Translate from" : "Translate to"}>
+      {includeAuto && (
+        <button type="button" className="lang-chip auto" aria-pressed={value === "auto"}
+          onClick={() => onPick("auto")}>Detect</button>
+      )}
+      {app.languages.map((l) => (
+        <button key={l.code} type="button" className="lang-chip" aria-pressed={value === l.code}
+          title={l.name} onClick={() => onPick(l.code)}>{l.native}</button>
       ))}
-      <select className="select" aria-label="More languages" value={QUICK.includes(value) || value === "auto" ? "" : value}
-        onChange={(e) => e.target.value && onPick(e.target.value)} style={{ minWidth: 120 }}>
-        <option value="">More…</option>
-        {app.languages.filter((l) => !QUICK.includes(l.code)).map((l) => <option key={l.code} value={l.code}>{l.native} ({l.name})</option>)}
-      </select>
-    </>
+    </div>
   );
 
   return (

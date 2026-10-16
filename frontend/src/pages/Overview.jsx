@@ -1,14 +1,15 @@
 import {
-  ArrowRight, Award, BookOpen, Building2, ClipboardCheck, Flame, Languages, MessageSquareText, Star, Target,
+  ArrowRight, Award, BookOpen, ClipboardCheck, Flame, Languages, MessageSquareText, Sparkles, Star, Target,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
+import SubjectArt from "../components/SubjectArt.jsx";
 import { CountUp } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
-import { subjectCode, timeAgo } from "../lib/format.js";
+import { timeAgo } from "../lib/format.js";
 
 function Title({ text, lang }) {
   // Highlight the second half of the English headline ("in your language").
@@ -40,7 +41,7 @@ export default function Overview() {
   const goal = progress?.goal ?? { done: 0, goal: user?.daily_goal ?? 5 };
   const earned = progress ? progress.badges.filter((b) => b.earned).length : 0;
   const recentSubject = recent && (recent.mode === "helpdesk" ? app.helpdesk : app.subjects.find((s) => s.slug === recent.subject));
-  const recentHref = recent && (recent.mode === "helpdesk" ? `/helpdesk/${recent.id}` : `/learn/${recent.subject || "all"}/${recent.id}`);
+  const recentHref = recent && (recent.mode === "helpdesk" ? `/tatvai/${recent.id}` : `/learn/${recent.subject || "all"}/${recent.id}`);
 
   return (
     <>
@@ -96,12 +97,10 @@ export default function Overview() {
         <section className="section">
           <div className="section-head"><h2>Continue where you left off</h2></div>
           <Link to={recentHref} className="continue-card lift">
-            <span className="cc-code" style={{ background: recentSubject?.color || "var(--c-teal)" }}>
-              {recent.mode === "helpdesk" ? "HLP" : recentSubject ? subjectCode(recentSubject.title) : "ALL"}
-            </span>
+            <SubjectArt subject={recent.mode === "helpdesk" ? "tatvai" : recentSubject || "all"} size={42} />
             <span style={{ flex: 1, minWidth: 0 }}>
               <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{recent.title}</strong>
-              <span className="small muted">{recentSubject?.title || t("all_subjects")} · {timeAgo(recent.updated_at)}</span>
+              <span className="small muted">{recent.mode === "helpdesk" ? "TatvAI" : recentSubject?.title || t("all_subjects")} · {timeAgo(recent.updated_at)}</span>
             </span>
             <ArrowRight size={18} className="muted" />
           </Link>
@@ -116,7 +115,8 @@ export default function Overview() {
         <div className="subject-tiles stagger">
           {app.subjects.map((s, i) => (
             <div key={s.slug} className="subject-tile lift" style={{ "--tone": s.color, "--i": i }}>
-              <span className="st-code">{subjectCode(s.title)}</span>
+              <SubjectArt subject={s} variant="backdrop" />
+              <SubjectArt subject={s} size={48} />
               <Link to={`/learn/${s.slug}`} style={{ color: "inherit", textDecoration: "none" }}>
                 <h3>{s.title}</h3>
                 <p>{s.description}</p>
@@ -135,7 +135,7 @@ export default function Overview() {
         <div className="section-head"><h2>More to explore</h2></div>
         <div className="quick-strip stagger">
           {[
-            ["/helpdesk", Building2, t("card_helpdesk"), t("card_helpdesk_desc"), "var(--c-plum)"],
+            ["/tatvai", Sparkles, t("card_helpdesk"), t("card_helpdesk_desc"), "var(--c-plum)"],
             ["/assessments", ClipboardCheck, t("card_quiz"), t("card_quiz_desc"), "var(--c-coral)"],
             ["/notes", BookOpen, t("card_library"), t("card_library_desc"), "var(--c-saffron)"],
             ["/translate", Languages, t("nav_translate"), "Translate between 13 Indian languages as you type.", "var(--c-leaf)"],
@@ -152,7 +152,7 @@ export default function Overview() {
       <p className="small muted" style={{ marginTop: 32 }}>
         <span className="mono">TatvaX {app.version}</span>
         {" · "}
-        {app.ai_enabled ? `AI tutor: ${app.ai_model} on NVIDIA` : "Notes mode: answers come from the school's study notes"}
+        {app.ai_enabled ? `AI: ${app.ai_model}${app.ai_provider ? ` via ${app.ai_provider}` : ""}` : "Notes mode: answers come from the school's study notes"}
         {" · "}
         <kbd>Ctrl</kbd> <kbd>K</kbd> {t("nav_translate")}
       </p>

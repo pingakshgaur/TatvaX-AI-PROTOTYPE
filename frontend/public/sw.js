@@ -1,6 +1,6 @@
 // TatvaX service worker: installable app shell and offline study notes.
 // Build assets have content hashes in their names, so they are cached forever on first use.
-const VERSION = "tatvax-2.0.0";
+const VERSION = "tatvax-2.5.1";
 const PRECACHE = ["/", "/manifest.webmanifest", "/theme-boot.js", "/icons/icon.svg", "/icons/icon-192.png"];
 // API reads that may be served from cache while offline.
 const OFFLINE_API = ["/api/bootstrap", "/api/library", "/api/me", "/api/progress"];

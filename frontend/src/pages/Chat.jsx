@@ -1,14 +1,16 @@
 import {
-  ArrowUp, ClipboardCheck, Copy, CornerDownRight, Languages, Mic, PanelLeft, Plus, Sparkles, Square, Trash2, Volume2, X,
+  ArrowUp, Check, ClipboardCheck, Copy, CornerDownRight, Eraser, Languages, Mic, PanelLeft, Pencil, Plus, RotateCcw,
+  Sparkles, Square, Trash2, Volume2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
+import SubjectArt from "../components/SubjectArt.jsx";
 import { Dialog, EmptyState, Markdown } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api, ApiError, streamChat } from "../lib/api.js";
-import { subjectCode, timeAgo } from "../lib/format.js";
+import { timeAgo } from "../lib/format.js";
 import { SUGGESTIONS } from "../lib/i18n.js";
 import { plainText } from "../lib/markdown.js";
 import { canListen, listen, speak, stopSpeaking } from "../lib/voice.js";
@@ -76,7 +78,72 @@ function TranslateAnswer({ text, onClose }) {
   );
 }
 
-function AssistantTurn({ message, canAssess, onAssess, showSuggestions, onAsk }) {
+// The student's own prompt, with tools to copy it, edit and ask again, or ask it again as it is.
+function UserTurn({ message, busy, onEdit, onResend }) {
+  const { t, notify } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+  const editRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = editRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 260)}px`;
+  }, [draft, editing]);
+
+  const startEdit = () => {
+    setDraft(message.content);
+    setEditing(true);
+    requestAnimationFrame(() => {
+      const el = editRef.current;
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    });
+  };
+  const save = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setEditing(false);
+    if (text !== message.content.trim()) onEdit(text);
+  };
+
+  return (
+    <article className={`turn turn-user${editing ? " editing" : ""}`}>
+      <div className="turn-label">{t("you")}</div>
+      {editing ? (
+        <div className="prompt-edit">
+          <label className="sr-only" htmlFor={`edit-${message.id}`}>Edit your question</label>
+          <textarea id={`edit-${message.id}`} ref={editRef} dir="auto" maxLength={2000} value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); save(); }
+              if (e.key === "Escape") setEditing(false);
+            }} />
+          <div className="prompt-edit-actions">
+            <span className="small muted">The answers after this question will be replaced.</span>
+            <span className="spacer" />
+            <button className="btn btn-secondary btn-sm" type="button" onClick={() => setEditing(false)}>{t("cancel")}</button>
+            <button className="btn btn-sm" type="button" onClick={save} disabled={!draft.trim() || busy}><Check size={14} /> Save and ask</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="turn-body" dir="auto">{message.content}</div>
+          <div className="prompt-tools" role="toolbar" aria-label="Question tools">
+            <button className="icon-btn" type="button" title={t("copy")} aria-label="Copy question"
+              onClick={() => navigator.clipboard.writeText(message.content).then(() => notify(t("copied")))}><Copy size={14} /></button>
+            <button className="icon-btn" type="button" title="Edit question" aria-label="Edit question"
+              disabled={busy || message.id == null} onClick={startEdit}><Pencil size={14} /></button>
+            <button className="icon-btn" type="button" title="Ask again" aria-label="Ask this question again"
+              disabled={busy} onClick={() => onResend(message.content)}><RotateCcw size={14} /></button>
+          </div>
+        </>
+      )}
+    </article>
+  );
+}
+
+function AssistantTurn({ message, canAssess, onAssess, showSuggestions, onAsk, label }) {
   const { t, lang, app, notify } = useApp();
   const [speaking, setSpeaking] = useState(false);
 
@@ -90,7 +157,7 @@ function AssistantTurn({ message, canAssess, onAssess, showSuggestions, onAsk })
 
   return (
     <article className="turn turn-assistant">
-      <div className="turn-label">TatvaX</div>
+      <div className="turn-label">{label}</div>
       <div className="turn-body">
         {message.pending && !message.content
           ? <span className="typing" aria-label="TatvaX is writing"><span /><span /><span /></span>
@@ -176,7 +243,7 @@ export default function Chat({ mode }) {
   const slug = mode === "subject" ? params.slug : app.helpdesk?.slug;
   const subject = mode === "subject" ? app.subjects.find((s) => s.slug === slug) : app.helpdesk;
   const conversationId = Number(params.conversationId) || null;
-  const base = mode === "helpdesk" ? "/helpdesk" : `/learn/${slug}`;
+  const base = mode === "helpdesk" ? "/tatvai" : `/learn/${slug}`;
   const title = mode === "helpdesk" ? t("card_helpdesk") : subject ? subject.title : t("all_subjects");
   const suggestionKey = mode === "helpdesk" ? "helpdesk" : SUGGESTIONS[slug] ? slug : "all";
   const invalidSubject = mode === "subject" && slug !== "all" && !subject;
@@ -294,8 +361,14 @@ export default function Chat({ mode }) {
           schedule();
         } else if (event.type === "done") {
           cancelAnimationFrame(bufferRef.current.frame);
-          updateLast({ content: bufferRef.current.text, pending: false, engine: event.engine, sources: event.sources,
-            suggestions: event.suggestions });
+          setMessages((list) => {
+            const next = [...list];
+            const last = next.length - 1;
+            next[last] = { ...next[last], id: event.message_id, content: bufferRef.current.text, pending: false,
+              engine: event.engine, sources: event.sources, suggestions: event.suggestions };
+            if (next[last - 1]?.role === "user") next[last - 1] = { ...next[last - 1], id: event.user_message_id };
+            return next;
+          });
           celebrate(event);
           loadHistory();
         } else if (event.type === "error") {
@@ -379,6 +452,24 @@ export default function Chat({ mode }) {
     }
   };
 
+  // Editing a question removes it and everything after it, then asks the edited question.
+  const editQuestion = async (index, text) => {
+    if (controllerRef.current) return;
+    const message = messages[index];
+    if (conversationId && message?.id != null) {
+      try {
+        await api(`/api/conversations/${conversationId}/rewind`, { method: "POST", body: { message_id: message.id } });
+      } catch (err) {
+        notify(err.message, { kind: "error" });
+        return;
+      }
+    }
+    setMessages((list) => list.slice(0, index));
+    send(text);
+  };
+
+  const copyDraft = () => navigator.clipboard.writeText(input).then(() => notify(t("copied")));
+
   const confirmDelete = async () => {
     const id = pendingDelete.id;
     setPendingDelete(null);
@@ -427,9 +518,7 @@ export default function Chat({ mode }) {
         <header className="chat-header">
           <button className="icon-btn bordered history-toggle" type="button" aria-label={t("history")}
             aria-expanded={historyOpen} onClick={() => setHistoryOpen((open) => !open)}><PanelLeft size={16} /></button>
-          <span className="subject-code" style={{ "--subject-color": subject?.color || "var(--accent)", minWidth: 38, height: 38 }}>
-            {mode === "helpdesk" ? "HLP" : subject ? subjectCode(subject.title) : "ALL"}
-          </span>
+          <SubjectArt subject={mode === "helpdesk" ? "tatvai" : subject || "all"} size={40} />
           <div className="grow">
             <h1>{title}</h1>
             <span className="small muted">{app.ai_enabled ? t("ai_badge") : t("library_badge")} · {languageInfo().native}</span>
@@ -455,12 +544,10 @@ export default function Chat({ mode }) {
                 </div>
               </div>
             ) : messages.map((m, i) => (m.role === "user" ? (
-              <article className="turn turn-user" key={m.id ?? `u${i}`}>
-                <div className="turn-label">{t("you")}</div>
-                <div className="turn-body" dir="auto">{m.content}</div>
-              </article>
+              <UserTurn key={m.id ?? `u${i}`} message={m} busy={busy}
+                onEdit={(text) => editQuestion(i, text)} onResend={send} />
             ) : (
-              <AssistantTurn key={m.id ?? `a${i}`} message={m} canAssess={mode === "subject" && Boolean(subject)}
+              <AssistantTurn key={m.id ?? `a${i}`} message={m} label={mode === "helpdesk" ? "TatvAI" : "TatvaX"} canAssess={mode === "subject" && Boolean(subject)}
                 showSuggestions={i === messages.length - 1 && !busy} onAsk={send}
                 onAssess={(q) => navigate(`/assessments/${slug}?topic=${encodeURIComponent(q.slice(0, 80))}`)} />
             )))}
@@ -488,8 +575,17 @@ export default function Chat({ mode }) {
             <div className="composer-tools">
               <button className={`icon-btn bordered mic${listening ? " listening" : ""}`} type="button" onClick={toggleMic}
                 aria-label={t("voice_input")} title={t("voice_input")} aria-pressed={listening}><Mic size={16} /></button>
+              {input && (
+                <>
+                  <button className="icon-btn bordered" type="button" onClick={copyDraft} aria-label="Copy what you typed" title={t("copy")}>
+                    <Copy size={15} />
+                  </button>
+                  <button className="icon-btn bordered" type="button" aria-label="Clear the box" title="Clear"
+                    onClick={() => { setInput(""); textareaRef.current?.focus(); }}><Eraser size={15} /></button>
+                </>
+              )}
               <span className="spacer" />
-              <span className="hint">{t("enter_to_send")}</span>
+              <span className="hint">{input.length > 1500 ? `${input.length} / 2000` : t("enter_to_send")}</span>
               <button className="btn btn-sm" type="submit" disabled={!busy && !input.trim()} aria-label={busy ? t("stop") : t("send")}>
                 {busy ? <><Square size={13} /> {t("stop")}</> : <><ArrowUp size={15} /> {t("send")}</>}
               </button>

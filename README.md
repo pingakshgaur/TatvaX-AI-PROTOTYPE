@@ -1,12 +1,26 @@
-# TatvaX v2
+# TatvaX v2.5.1
 
-**A multilingual AI tutor, assessment platform and school help desk for Indian students.**
+**A multilingual AI tutor, assessment platform and AI school companion for Indian students.**
 
 Students ask questions by typing or speaking in any of 13 Indian languages, get step-by-step explanations grounded in their school's own study notes, practise with assessments, and track their progress. Teachers get class analytics and edit the notes the tutor teaches from.
 
 [Watch the v1 prototype in action](https://youtu.be/hqo_TAZh0ls)
 
 ---
+
+## What's new in version 2.5.1
+
+- **Any AI provider**: NVIDIA (unchanged, still the default), Google Gemini, Groq, OpenRouter, OpenAI, Anthropic Claude, Mistral, DeepSeek, Together AI, xAI, a local Ollama, or any OpenAI-compatible server. Each provider keeps its own key and model, and teachers switch between them in **Teacher console > AI settings**. Requests adapt automatically when a model rejects an option (for example `temperature` or `max_tokens`), so new models work without code changes.
+- **Faster answers**: reasoning is turned off for NVIDIA models that think before answering, the prompt sends only the relevant notes, and longer assessments are written in parallel batches. In testing, the first words of an answer arrived in about 1.6 s, and a 20-question assessment took about 12 s instead of 60–90 s.
+- **TatvAI**: the help desk is now TatvAI, an AI companion for school questions and study help.
+- **Subject artwork**: every subject has its own illustration, used as its logo and as the backdrop of its cards everywhere in the app. Gradients are gone.
+- **A new Subjects page** with chapters, topics, your questions, average score, notes read and quick links for every subject.
+- **To-do list**: tasks with notes, priority, due dates, subjects, tags and steps; views for today, upcoming and overdue; search, sorting, drag-to-reorder, duplicate and bulk actions. A to-do panel in the profile menu shows what's next.
+- **Prompt tools**: copy, edit (the conversation continues from the edited question) or re-ask any question, plus copy and clear in the message box.
+- **Assessment history**: review any past assessment, retake it with the questions reshuffled, or delete it.
+- **PDF exports**: study notes for any subject, and assessment reports with the score, a per-subject breakdown, and every question with the correct answer and explanation.
+- **Translator**: all 13 languages are listed on both sides; no more "More" menu.
+- **A simpler profile menu**, with language, daily goal, theme and sound moved into **Settings**.
 
 ## What's new in version 2
 
@@ -24,7 +38,7 @@ Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingaks
 | Motivation | None | XP, levels, daily streaks, 10 achievements, weekly class leaderboard |
 | Teachers | None | Teacher console: analytics, student table, content editor, feedback inbox |
 | Security | Hard-coded secret key, `debug=True` on `0.0.0.0`, feedback (with emails) saved to a public folder | Generated secret, local-only dev server, strict CSP, JSON-only writes (CSRF defence), rate limits, private feedback |
-| Tests | None | 53 backend tests |
+| Tests | None | 76 backend tests |
 
 Bugs fixed from v1 include: speech output stripped the vowel signs (matras) from every Indic sentence; good translations were thrown away whenever they contained the word "error"; word replacements turned "hardware" into "needs practiceware"; voice input crashed; the app crashed at start-up on a default Windows console.
 
@@ -39,16 +53,17 @@ From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentica
 **For students**
 - **Subject tutor**: mathematics, science, English and social studies, plus any subject a teacher adds. Answers stream in live with rendered maths, and the tutor adapts its explanations to the student's class.
 - **Follow-up suggestions**: after every answer, three new, clickable questions that build on it (never repeating what was already asked).
-- **School help desk**: admissions, fees, exams and rules. The help desk answers only from the school's information and never invents fees, dates or phone numbers.
-- **Assessments**: pick several subjects at once, 3–30 questions, easy/medium/hard/mixed difficulty, and three modes: practice (instant feedback), exam (question navigator and flags, marked at the end) and timed. Results show a per-subject breakdown, and one click retries just the mistakes or sends them to the tutor to explain.
-- **Study notes**: colour-coded chapter and topic cards with example/remember/formula callouts, reading progress, "mark as read", a quiz per chapter, and search. Available offline once opened.
-- **Translator**: translate as you type between 13 languages, with language detection, voice input, read-aloud and history (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Any answer can also be translated in place.
+- **TatvAI**: an AI companion for admissions, fees, exams, rules and general study help. School facts come only from the school's information, so it never invents fees, dates or phone numbers.
+- **Assessments**: pick several subjects at once, 3–30 questions, easy/medium/hard/mixed difficulty, and three modes: practice (instant feedback), exam (question navigator and flags, marked at the end) and timed. Results show a per-subject breakdown, and one click retries just the mistakes or sends them to the tutor to explain. Every assessment is saved to a history where it can be reviewed, retaken or exported as a PDF report.
+- **Study notes**: colour-coded chapter and topic cards with example/remember/formula callouts, reading progress, "mark as read", a quiz per chapter, search and PDF export. Available offline once opened.
+- **Translator**: translate as you type between 13 languages (all listed on both sides), with language detection, voice input, read-aloud and history (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Any answer can also be translated in place.
 - **Voice**: ask by speaking (with a live microphone level), and listen to any answer.
 - **Rewards**: XP and levels, daily streaks, an adjustable daily goal, 13 achievements in four rarities with full-screen celebrations, and a weekly leaderboard (opt-out available).
-- **Profile menu**: level ring, XP, streak, achievements, rank, daily goal, theme and sound settings, all from the avatar in the top bar.
+- **To-do list**: plan homework and revision with priorities, due dates, subjects, tags and steps.
+- **Profile menu**: level, XP, daily goal and a to-do panel from the avatar in the top bar, with language, theme, goal and sound in Settings.
 
 **For teachers**
-- **AI settings**: paste a free NVIDIA API key, choose the model and test the connection, with no restart needed.
+- **AI settings**: choose the AI provider (NVIDIA, Gemini, Groq, OpenRouter, OpenAI, Claude, Mistral, DeepSeek, Together, xAI, Ollama or a custom server), paste its key, load the models it offers and test the connection, with no restart needed.
 - Class analytics: active learners, questions per day, subjects, languages, and average assessment scores by subject (lowest first, to show what needs revision).
 - A student table with level, XP, questions, assessments, average score and last activity.
 - A Markdown content editor with live preview. Add a subject and the tutor, search and assessments use it immediately.
@@ -82,9 +97,9 @@ python run.py
 
 Open **http://localhost:5000**. The first account you create becomes the **teacher/administrator**.
 
-### Turning on the AI tutor (free NVIDIA key)
+### Turning on the AI tutor
 
-TatvaX's AI tutor runs on open models hosted by NVIDIA, which offers **free developer API keys**:
+TatvaX works with many AI providers. NVIDIA, Google Gemini and Groq all offer **free API keys**. The default is NVIDIA:
 
 1. Go to [build.nvidia.com](https://build.nvidia.com) and sign in or create a free NVIDIA account.
 2. Open your profile menu and choose **API Keys**, then **Generate API Key**. The key starts with `nvapi-`.
@@ -94,15 +109,17 @@ You can also set `NVIDIA_API_KEY` in a `.env` file (see `.env.example`); a key s
 
 | Model | Notes |
 |---|---|
-| `google/gemma-4-31b-it` (default) | Strong in Indian languages, fast |
 | `deepseek-ai/deepseek-v4.1-flash` | Very good at maths and step-by-step reasoning |
 | `moonshotai/kimi-k2.6` | Large general model with detailed answers |
-| `nvidia/nemotron-3-super-120b-a12b` | NVIDIA's general-purpose model |
+| `nvidia/nemotron-3-super-120b-a12b` (default) | Fast general-purpose model, good in Indian languages |
+| `google/gemma-4-31b-it` | Strong in Indian languages, but slow on the free tier |
 | `mistralai/mistral-large-2-instruct` | Reliable all-rounder |
 
 Any other chat model ID from build.nvidia.com can be entered too.
 
-NVIDIA's free tier is meant for prototyping and is rate limited (about 40 requests a minute). When a limit is hit, or the key is wrong, students automatically get answers from the study notes instead of an error.
+**Other providers.** In **AI settings**, pick a provider, paste its key and select **Save and use**. TatvaX picks a model the key can use, or select **Load available models** to choose one. Keys can also come from environment variables: `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, `TOGETHER_API_KEY`, `XAI_API_KEY` and `TATVAX_CUSTOM_API_KEY`. Ollama needs no key.
+
+Free tiers are meant for prototyping and are rate limited (NVIDIA allows about 40 requests a minute). When a limit is hit, or the key is wrong, students automatically get answers from the study notes instead of an error.
 
 Without a key, TatvaX runs in **notes mode**: answers come from the study notes through search and are translated with free public translation services, and assessments come from the built-in question bank. The status indicator in the top bar shows which mode is active.
 
@@ -133,7 +150,7 @@ TatvaX/
 │   ├── __init__.py         # app factory, security headers, serves the React build
 │   ├── config.py           # settings from environment variables
 │   ├── db.py               # SQLite schema
-│   ├── ai.py               # NVIDIA API client: streaming, JSON output, error fallbacks
+│   ├── ai.py               # AI providers (NVIDIA, Gemini, OpenAI, Claude, ...): streaming, JSON, fallbacks
 │   ├── tutor.py            # answers: AI grounded in notes, or offline search
 │   ├── knowledge.py        # content library + BM25 search
 │   ├── quiz.py             # assessments (AI-generated or question bank)
@@ -144,9 +161,10 @@ TatvaX/
 │   ├── users.py            # accounts and settings
 │   ├── api.py              # student API
 │   ├── admin.py            # teacher API
+│   ├── todos.py            # to-do list API
 │   └── security.py         # CSRF guard, rate limiting, roles
 ├── frontend/               # React 18 + Vite
-│   ├── src/pages/          # Overview, Subjects, Chat, Assessments, Notes, Progress, Teacher
+│   ├── src/pages/          # Overview, Subjects, Chat, Assessments, Notes, To-dos, Teacher, print exports
 │   ├── src/components/     # Shell, charts, dialogs, UI primitives
 │   ├── src/lib/            # API client, i18n, Markdown + KaTeX, voice
 │   ├── src/styles/         # design tokens and components
@@ -176,8 +194,11 @@ All endpoints are under `/api`. Writes must be JSON.
 |---|---|---|
 | GET | `/bootstrap` | Languages, subjects, AI status, current user |
 | POST | `/chat` | Ask a question; streams NDJSON events (`start`, `delta`, `replace`, `done`) |
-| GET/DELETE | `/conversations[/<id>]` | Session history |
-| POST | `/quiz`, `/quiz/<id>/answer` | Assessments |
+| GET/DELETE | `/conversations[/<id>]`, POST `/conversations/<id>/rewind` | Session history, editing a question |
+| POST | `/quiz`, `/quiz/<id>/answer`, `/quiz/<id>/submit`, `/quiz/<id>/retry`, `/quiz/<id>/retake` | Assessments |
+| GET/DELETE | `/quizzes`, `/quiz/<id>` | Assessment history and review |
+| GET/POST/PATCH/DELETE | `/todos[/<id>]`, POST `/todos/reorder`, `/todos/bulk`, `/todos/<id>/duplicate` | To-do list |
+| GET | `/subjects/overview` | Per-subject facts for the Subjects page |
 | GET | `/progress`, `/leaderboard` | Progress and gamification |
 | GET | `/library[/<slug>]`, `/search?q=` | Study notes |
 | POST | `/translate`, `/tts` | Translation and speech |
@@ -186,7 +207,7 @@ All endpoints are under `/api`. Writes must be JSON.
 | POST | `/feedback` | Feedback |
 | GET | `/admin/overview`, `/admin/students`, `/admin/feedback` | Teacher analytics |
 | GET/POST/PUT/DELETE | `/admin/documents[/<slug>]` | Content editor |
-| GET/PUT | `/admin/ai`, POST `/admin/ai/test` | NVIDIA key, model and connection test |
+| GET/PUT | `/admin/ai`, GET `/admin/ai/models`, `/admin/ai/key`, POST `/admin/ai/test` | AI providers, keys, models and connection test |
 
 ---
 
@@ -199,7 +220,7 @@ build:  pip install -r requirements.txt && cd frontend && npm ci && npm run buil
 start:  gunicorn "run:app" --worker-class gthread --threads 8 --timeout 180
 ```
 
-Set `TATVAX_SECRET_KEY`, `TATVAX_SECURE_COOKIES=1` (on HTTPS) and `TATVAX_BEHIND_PROXY=1` (behind a proxy), and give the server a persistent disk for `instance/`. That folder holds the SQLite database, including an NVIDIA key saved from the console, so keep it private. Rate limits are in-memory, so run a single process, or put a shared limiter in front if you scale out.
+Set `TATVAX_SECRET_KEY`, `TATVAX_SECURE_COOKIES=1` (on HTTPS) and `TATVAX_BEHIND_PROXY=1` (behind a proxy), and give the server a persistent disk for `instance/`. That folder holds the SQLite database, including any AI keys saved from the console, so keep it private. Rate limits are in-memory, so run a single process, or put a shared limiter in front if you scale out.
 
 ---
 

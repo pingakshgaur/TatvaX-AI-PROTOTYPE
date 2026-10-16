@@ -108,6 +108,24 @@ CREATE TABLE IF NOT EXISTS feedback (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS todos (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    notes TEXT,
+    done INTEGER NOT NULL DEFAULT 0,
+    priority TEXT NOT NULL DEFAULT 'medium',     -- low | medium | high | urgent
+    due_date TEXT,                               -- YYYY-MM-DD
+    subject TEXT,                                -- document slug
+    tags TEXT,                                   -- JSON list
+    subtasks TEXT,                               -- JSON list of {text, done}
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_todos_user ON todos(user_id, done, position);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -175,6 +193,8 @@ def migrate(conn) -> None:
         columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
         if column not in columns:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {declaration}")
+    # v2.5.1: the help desk became TatvAI, so its notes are now called "School Information".
+    conn.execute("UPDATE documents SET title = 'School Information' WHERE slug = 'school-faq' AND title = 'School Help Desk'")
 
 
 def init_db(path: str) -> None:

@@ -108,8 +108,11 @@ def test_tutor_streams_ai_answers_grounded_in_the_notes(app, client):
     assert events[-1]["engine"] == "ai"
 
     call = fake.calls[0]
-    assert "<library>" in call["system"] and "BODMAS" in call["system"]  # one subject: notes inlined
     final_user = call["messages"][-1]["content"]
+    # Only the best-matching sections are sent, which keeps prompts short and replies fast.
+    assert "<library>" not in call["system"]
+    assert "<relevant_notes>" in final_user and "BODMAS" in final_user
+    assert len(final_user) < 6000
     assert "Reply language: Hindi" in final_user and final_user.endswith("Explain BODMAS")
 
     # Follow-ups replay the earlier exchange as history.
@@ -159,12 +162,12 @@ def test_generate_json_tolerates_fenced_output(monkeypatch):
 
 def test_ai_service_key_sources():
     service = AIService(env_key="", model="")
-    assert not service.available and service.model == "google/gemma-4-31b-it"
+    assert not service.available and service.model == "nvidia/nemotron-3-super-120b-a12b"
     service = AIService(env_key="nvapi-env-key-0000000000000")
     assert service.available and service.source == "environment"
     service.configure("nvapi-saved-key-11111111111", "deepseek-ai/deepseek-v4.1-flash")
     assert service.source == "settings" and service.model == "deepseek-ai/deepseek-v4.1-flash"
     assert service.status()["key_hint"] == "nvapi-…1111"
     service.configure(None, None)  # removing the saved key falls back to the environment
-    assert service.source == "environment" and service.model == "google/gemma-4-31b-it"
+    assert service.source == "environment" and service.model == "nvidia/nemotron-3-super-120b-a12b"
     assert not AIService(env_key="nvapi-env-key-0000000000000", allowed=False).available

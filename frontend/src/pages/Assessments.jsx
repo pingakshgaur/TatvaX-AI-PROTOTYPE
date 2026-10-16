@@ -1,16 +1,16 @@
 import {
-  ArrowLeft, ArrowRight, Check, CheckCheck, Clock, Flag, Flame, Layers, Lightbulb, MessageSquareText, Play,
-  RotateCcw, Shuffle, Timer, X,
+  ArrowLeft, ArrowRight, Check, CheckCheck, Clock, FileDown, Flag, Flame, History, Layers, Lightbulb, MessageSquareText,
+  Play, RotateCcw, Shuffle, Timer, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Ring } from "../components/Charts.jsx";
 import { useCrumbs } from "../components/Shell.jsx";
+import SubjectArt from "../components/SubjectArt.jsx";
 import { Dialog, InlineMarkdown, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
-import { subjectCode } from "../lib/format.js";
 
 const KEYS = ["A", "B", "C", "D"];
 const PRESETS = [5, 10, 15, 20, 30];
@@ -21,7 +21,7 @@ const MODES = [
   ["timed", Timer, "Timed", "Exam mode against the clock. Score 80% or more for bonus XP.", "var(--c-coral)"],
 ];
 
-const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, "0")}`;
+export const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, "0")}`;
 
 // ------------------------------------------------------------------ builder
 
@@ -54,7 +54,8 @@ function Builder({ initialSubjects, initialTopic, onStart }) {
 
   return (
     <>
-      <PageHeader eyebrow={t("group_practice")} title={t("quiz_title")} lede={t("quiz_sub")} />
+      <PageHeader eyebrow={t("group_practice")} title={t("quiz_title")} lede={t("quiz_sub")}
+        actions={<Link className="btn btn-secondary" to="/assessments/history"><History size={15} /> My assessments</Link>} />
       <div className="builder">
         <div>
           <section className="builder-step">
@@ -68,7 +69,7 @@ function Builder({ initialSubjects, initialTopic, onStart }) {
               {app.subjects.map((s, i) => (
                 <button key={s.slug} type="button" aria-pressed={subjects.includes(s.slug)} onClick={() => toggle(s.slug)}
                   style={{ "--tone": s.color, "--i": i }}>
-                  <span className="sp-code">{subjectCode(s.title)}</span>
+                  <SubjectArt subject={s} size={34} />
                   {s.title}
                   <span className="sp-check" aria-hidden="true"><Check size={12} /></span>
                 </button>
@@ -136,7 +137,7 @@ function Builder({ initialSubjects, initialTopic, onStart }) {
             {busy && app.ai_enabled && (
               <p className="hint" role="status" style={{ marginTop: 10 }}>
                 The AI is writing {count} fresh questions{chosen.length > 1 ? ` across ${chosen.length} subjects` : ""}.
-                {count > 10 ? " Longer assessments can take up to a minute or two." : " This usually takes a few seconds."}
+                {count > 10 ? " Questions are written in parallel batches, so this takes around ten to twenty seconds." : " This usually takes a few seconds."}
               </p>
             )}
           </Panel>
@@ -162,7 +163,7 @@ function QuestionCard({ quiz, index, children }) {
   );
 }
 
-function PracticeRunner({ quiz, onFinish }) {
+export function PracticeRunner({ quiz, onFinish }) {
   const { t } = useApp();
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -242,7 +243,7 @@ function PracticeRunner({ quiz, onFinish }) {
   );
 }
 
-function ExamRunner({ quiz, onFinish }) {
+export function ExamRunner({ quiz, onFinish }) {
   const { t } = useApp();
   const total = quiz.questions.length;
   const [index, setIndex] = useState(0);
@@ -354,7 +355,7 @@ function ExamRunner({ quiz, onFinish }) {
 
 // ------------------------------------------------------------------ results
 
-function Results({ quiz, outcome, onRestart, onRetry }) {
+export function Results({ quiz, outcome, onRestart, onRetry, review: reviewing = false }) {
   const { t, celebrate } = useApp();
   const celebrated = useRef(false);
   const [retrying, setRetrying] = useState(false);
@@ -372,11 +373,11 @@ function Results({ quiz, outcome, onRestart, onRetry }) {
   const heading = ratio === 1 ? t("great_job") : ratio >= 0.6 ? t("good_job") : t("keep_going");
 
   useEffect(() => {
-    if (finished && !celebrated.current) {
+    if (finished && !reviewing && !celebrated.current) {
       celebrated.current = true;
       celebrate(finished);
     }
-  }, [celebrate, finished]);
+  }, [celebrate, finished, reviewing]);
 
   const retry = async () => {
     setRetrying(true);
@@ -400,7 +401,7 @@ function Results({ quiz, outcome, onRestart, onRetry }) {
         <div className="score-summary">
           <Ring fraction={ratio} size={128} stroke={10} label={`${score}/${total}`} sub={`${Math.round(ratio * 100)}%`} />
           <div>
-            <span className="eyebrow">{t("your_score")} · {quiz.subject_title}</span>
+            <span className="eyebrow">{t("your_score")} · {quiz.subject_title}{quiz.completed_at ? ` · ${new Date(quiz.completed_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : ""}</span>
             <h2>{heading}</h2>
             <p className="muted" style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
               {finished?.xp_gained > 0 && <span>{t("xp_gained", { n: finished.xp_gained })}</span>}
@@ -410,7 +411,9 @@ function Results({ quiz, outcome, onRestart, onRetry }) {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
               {wrong.length > 0 && <button className="btn" type="button" onClick={retry} disabled={retrying}><RotateCcw size={15} /> Retry my mistakes</button>}
               {wrong.length > 0 && <Link className="btn btn-secondary" to={explainLink}><MessageSquareText size={15} /> {t("explain_mistakes")}</Link>}
-              <button className={`btn ${wrong.length ? "btn-ghost" : ""}`} type="button" onClick={onRestart}><Play size={15} /> {t("try_again")}</button>
+              <button className={`btn ${wrong.length ? "btn-ghost" : ""}`} type="button" onClick={onRestart}><Play size={15} /> {reviewing ? "Retake this assessment" : t("try_again")}</button>
+              <a className="btn btn-ghost" href={`/print/assessment/${quiz.id}`} target="_blank" rel="noopener"><FileDown size={15} /> Export PDF</a>
+              <Link className="btn btn-ghost" to="/assessments/history"><History size={15} /> History</Link>
             </div>
             {error && <p className="form-error">{error}</p>}
           </div>
@@ -467,14 +470,26 @@ function Results({ quiz, outcome, onRestart, onRetry }) {
 export default function Assessments() {
   const { t, app } = useApp();
   const params = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [quiz, setQuiz] = useState(null);
+  // A retake started from the history page arrives ready to run.
+  const [quiz, setQuiz] = useState(() => location.state?.quiz || null);
   const [outcome, setOutcome] = useState(null);
   const [run, setRun] = useState(0);
   const initialSubjects = app.subjects.some((s) => s.slug === params.slug) ? [params.slug] : app.subjects.slice(0, 1).map((s) => s.slug);
 
   useCrumbs([{ label: t("nav_quiz"), to: "/assessments" }, ...(quiz ? [{ label: quiz.subject_title }] : [])]);
-  useEffect(() => { setQuiz(null); setOutcome(null); }, [params.slug]);
+  const shownSlug = useRef(params.slug);
+  useEffect(() => {
+    if (shownSlug.current === params.slug) return;
+    shownSlug.current = params.slug;
+    setQuiz(null);
+    setOutcome(null);
+  }, [params.slug]);
+  useEffect(() => {
+    if (location.state?.quiz) navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [quiz, outcome]);
 
   const restart = () => { setQuiz(null); setOutcome(null); setRun((n) => n + 1); };

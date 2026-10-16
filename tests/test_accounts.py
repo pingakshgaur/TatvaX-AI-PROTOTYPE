@@ -143,7 +143,7 @@ def test_teacher_saves_and_removes_the_nvidia_key(app, client, monkeypatch):
     assert client.post("/api/admin/ai/test", json={}).status_code == 502
 
     cleared = client.put("/api/admin/ai", json={"api_key": "", "model": ""}).get_json()["ai"]
-    assert cleared["configured"] is False and cleared["model"] == "google/gemma-4-31b-it"
+    assert cleared["configured"] is False and cleared["model"] == "nvidia/nemotron-3-super-120b-a12b"
     assert client.get("/api/bootstrap").get_json()["app"]["ai_enabled"] is False
 
 

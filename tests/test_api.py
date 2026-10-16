@@ -32,7 +32,7 @@ def test_follow_up_keeps_the_conversation(client):
 
 def test_helpdesk_mode_answers_from_school_information(client):
     events = ask(client, "What documents are needed for admission?", mode="helpdesk", subject=None)
-    assert "School Help Desk" in events[1]["text"]
+    assert "School Information" in events[1]["text"]
 
 
 def test_chat_validation(client):

@@ -8,7 +8,7 @@ import time
 from flask import Blueprint, current_app, request
 
 from . import gamification, knowledge
-from .ai import RECOMMENDED_MODELS, AIUnavailable
+from .ai import PROVIDERS, RECOMMENDED_MODELS, AIUnavailable
 from .db import get_db, get_setting, now_iso, set_setting, today
 from .security import error, require_role
 from .users import current_user
@@ -189,7 +189,7 @@ def delete_document(slug: str):
     if doc is None:
         return error("Document not found", 404)
     if doc["kind"] == "helpdesk" and len(knowledge.list_documents(db, "helpdesk")) == 1:
-        return error("The help desk needs at least one information page")
+        return error("TatvAI needs at least one school information page")
     db.execute("DELETE FROM documents WHERE slug = ?", (slug,))
     db.commit()
     return {"ok": True}
@@ -201,9 +201,32 @@ def _ai():
     return current_app.extensions["tatvax"].ai
 
 
+def _settings(db) -> dict:
+    return {row["key"]: row["value"] for row in db.execute("SELECT key, value FROM settings")}
+
+
+def _saved_at(db, pid: str):
+    key = "nvidia_api_key" if pid == "nvidia" else f"api_key:{pid}"
+    row = db.execute("SELECT updated_at FROM settings WHERE key = ?", (key,)).fetchone()
+    return row["updated_at"] if row else None
+
+
 def _ai_settings_response():
-    row = get_db().execute("SELECT updated_at FROM settings WHERE key = 'nvidia_api_key'").fetchone()
-    return {"ai": {**_ai().status(), "saved_at": row["updated_at"] if row else None}, "models": RECOMMENDED_MODELS}
+    db, ai = get_db(), _ai()
+    providers = [{**ai.provider_status(pid), "saved_at": _saved_at(db, pid)} for pid in PROVIDERS]
+    return {
+        "ai": {**ai.status(), "saved_at": _saved_at(db, ai.active)},
+        "active": ai.active,
+        "providers": providers,
+        "models": RECOMMENDED_MODELS,
+    }
+
+
+def _provider_from(data) -> str:
+    pid = str(data.get("provider") or "nvidia")
+    if pid not in PROVIDERS:
+        raise ValueError("Unknown AI provider")
+    return pid
 
 
 @bp.get("/ai")
@@ -215,23 +238,52 @@ def ai_settings():
 @bp.put("/ai")
 @require_role("teacher")
 def update_ai_settings():
-    """Save the NVIDIA API key and/or model. An empty api_key removes the saved key.
-
-    The key is stored server-side only; the API never sends it back, just a short hint."""
+    """Save a provider's API key, model and (for Ollama/custom servers) base URL, and optionally make
+    it the active provider. An empty api_key removes the saved key. Keys are stored server-side only;
+    the API sends back just a short hint unless a teacher explicitly asks to reveal one."""
     data = request.get_json(silent=True) or {}
+    try:
+        pid = _provider_from(data)
+    except ValueError as exc:
+        return error(str(exc))
+    provider = PROVIDERS[pid]
     db = get_db()
+    key_setting = "nvidia_api_key" if pid == "nvidia" else f"api_key:{pid}"
+    model_setting = "ai_model" if pid == "nvidia" else f"ai_model:{pid}"
+
     if "api_key" in data:
         key = str(data["api_key"] or "").strip()
-        if key and (len(key) < 20 or any(ch.isspace() for ch in key)):
+        if key and (len(key) < 8 or any(ch.isspace() for ch in key)):
+            hint = f" {provider.name} keys start with '{provider.key_prefix}'." if provider.key_prefix else ""
+            return error(f"That doesn't look like a valid API key.{hint}")
+        if pid == "nvidia" and key and len(key) < 20:
             return error("That doesn't look like an NVIDIA API key. Keys start with 'nvapi-'.")
-        set_setting(db, "nvidia_api_key", key or None)
+        set_setting(db, key_setting, key or None)
     if "model" in data:
         model = str(data["model"] or "").strip()
-        if model and not _MODEL_ID.match(model):
-            return error("Model IDs look like 'publisher/model-name', for example google/gemma-4-31b-it")
-        set_setting(db, "ai_model", model or None)
+        if model and not _MODEL_ID.match(model) and not re.match(r"^[A-Za-z0-9._:/-]{2,120}$", model):
+            return error("That model ID contains characters that aren't allowed")
+        if pid == "nvidia" and model and not _MODEL_ID.match(model):
+            return error("Model IDs look like 'publisher/model-name', for example nvidia/nemotron-3-super-120b-a12b")
+        set_setting(db, model_setting, model or None)
+    if "base_url" in data and pid != "nvidia":
+        url = str(data["base_url"] or "").strip()
+        if url and not re.match(r"^https?://[^\s]+$", url):
+            return error("The server address must start with http:// or https://")
+        set_setting(db, f"base_url:{pid}", url or None)
+    if data.get("activate"):
+        set_setting(db, "ai_provider", pid)
     db.commit()
-    _ai().configure(get_setting(db, "nvidia_api_key"), get_setting(db, "ai_model"))
+
+    ai = _ai()
+    ai.load(_settings(db))
+    # A new key with no model chosen yet (or a model the provider doesn't offer): pick one that exists.
+    if data.get("api_key") and pid != "nvidia" and not data.get("model"):
+        chosen = ai.choose_model(pid)
+        if chosen and chosen != ai.states[pid].model:
+            set_setting(db, model_setting, chosen)
+            db.commit()
+            ai.load(_settings(db))
     return _ai_settings_response()
 
 
@@ -240,21 +292,42 @@ def update_ai_settings():
 def reveal_ai_key():
     """The full saved key, shown only when a teacher asks to reveal it in the AI settings tab."""
     ai = _ai()
-    return {"api_key": ai.api_key or None, "source": ai.source,
-            "saved_at": (get_db().execute("SELECT updated_at FROM settings WHERE key = 'nvidia_api_key'").fetchone() or [None])[0]}
+    pid = request.args.get("provider") or ai.active
+    if pid not in PROVIDERS:
+        return error("Unknown AI provider")
+    state = ai.states[pid]
+    return {"api_key": state.api_key or None, "source": state.source, "saved_at": _saved_at(get_db(), pid)}
+
+
+@bp.get("/ai/models")
+@require_role("teacher")
+def list_ai_models():
+    pid = request.args.get("provider") or _ai().active
+    if pid not in PROVIDERS:
+        return error("Unknown AI provider")
+    try:
+        return {"models": _ai().list_models(pid)}
+    except AIUnavailable as exc:
+        return error(str(exc).removeprefix("rejected: "), 502)
 
 
 @bp.post("/ai/test")
 @require_role("teacher")
 def test_ai():
+    data = request.get_json(silent=True) or {}
+    try:
+        pid = _provider_from({"provider": data.get("provider") or _ai().active})
+    except ValueError as exc:
+        return error(str(exc))
     started = time.monotonic()
     try:
-        reply = _ai().test()
+        reply = _ai().test(pid)
     except AIUnavailable as exc:
-        return error(str(exc).removeprefix("rejected: "), 502, ai=_ai().status())
+        return error(str(exc).removeprefix("rejected: "), 502, ai=_ai().status(), provider=_ai().provider_status(pid))
     return {
         "ok": True,
         "reply": reply[:200],
         "latency_ms": round((time.monotonic() - started) * 1000),
         "ai": _ai().status(),
+        "provider": _ai().provider_status(pid),
     }

@@ -21,6 +21,7 @@ DIFFICULTIES = {"easy", "medium", "hard", "mixed"}
 MODES = {"practice", "exam", "timed"}
 MIN_QUESTIONS, MAX_QUESTIONS = 3, 30
 SECONDS_PER_QUESTION = {"easy": 45, "medium": 60, "hard": 90, "mixed": 60}
+BATCH_SIZE = 5
 
 QUIZ_PROMPT = """You write multiple-choice quizzes for school students in India, based on the school's \
 study notes below. Every question must be answerable from the notes, have exactly four options with exactly \
@@ -71,7 +72,7 @@ class QuizMaster:
     def _generate_ai(self, doc: dict, topic: str, count: int, difficulty: str, language: str) -> list[dict]:
         system = f'{QUIZ_PROMPT}\n\n<notes title="{doc["title"]}">\n{doc["body"]}\n</notes>'
         native = languages.LANGUAGES[language][1]
-        focus = f"Focus on this topic: {topic}." if topic else "Cover a mix of topics from across the notes."
+        focus = f"Focus on: {topic}." if topic else "Cover a mix of topics from across the notes."
         level = "questions of mixed difficulty (some easy, some medium, some hard)" if difficulty == "mixed" else f"{difficulty} questions"
         prompt = (
             f"Write {count} {level} for the {doc['title']} quiz. {focus} "
@@ -151,12 +152,25 @@ class QuizMaster:
         topic = topic.strip()[:80]
 
         def build(args):
-            doc, n = args
-            questions, engine = self._questions_for(doc, topic, n, difficulty, language)
+            doc, n, focus = args
+            questions, engine = self._questions_for(doc, focus or topic, n, difficulty, language)
             return [{**q, "subject": doc["slug"], "subject_title": doc["title"]} for q in questions], engine
 
-        jobs = [(doc, n) for doc, n in zip(docs, _split(count, len(docs))) if n > 0]
-        with ThreadPoolExecutor(max_workers=3) as pool:
+        jobs = []
+        for doc, n in zip(docs, _split(count, len(docs))):
+            if n <= 0:
+                continue
+            if self.ai.available and n > BATCH_SIZE and not topic:
+                # Write long assessments as parallel batches of 5, each on different chapters,
+                # so they finish in roughly the time of one short batch without repeating questions.
+                batches = -(-n // BATCH_SIZE)
+                chapters = [line[3:].strip() for line in doc["body"].splitlines() if line.startswith("## ")]
+                for i, size in enumerate(_split(n, batches)):
+                    picked = chapters[i::batches]
+                    jobs.append((doc, size, ", ".join(picked) if picked else ""))
+            else:
+                jobs.append((doc, n, ""))
+        with ThreadPoolExecutor(max_workers=6) as pool:
             results = list(pool.map(build, jobs))
         questions = [q for qs, _ in results for q in qs]
         engines = {engine for qs, engine in results if qs}
@@ -300,3 +314,80 @@ class QuizMaster:
         )
         conn.commit()
         return self._public(cur.lastrowid, docs, "Retry: mistakes", quiz["difficulty"], "practice", None, quiz["engine"], wrong)
+
+    # ------------------------------------------------------------------ history
+
+    def history(self, conn, user, limit: int = 200) -> list[dict]:
+        titles = {r["slug"]: (r["title"], r["color"]) for r in conn.execute("SELECT slug, title, color FROM documents")}
+        rows = conn.execute(
+            """SELECT id, subject, subjects_json, topic, mode, difficulty, total, score, engine, language,
+                      created_at, completed_at, duration_s, answers_json
+               FROM quizzes WHERE user_id = ? ORDER BY id DESC LIMIT ?""",
+            (user["id"], limit),
+        ).fetchall()
+        out = []
+        for r in rows:
+            slugs = json.loads(r["subjects_json"]) if r["subjects_json"] else [r["subject"]]
+            out.append({
+                "id": r["id"], "topic": r["topic"], "mode": r["mode"] or "practice", "difficulty": r["difficulty"],
+                "total": r["total"], "score": r["score"], "engine": r["engine"], "language": r["language"],
+                "created_at": r["created_at"], "completed_at": r["completed_at"], "duration_s": r["duration_s"],
+                "answered": len(json.loads(r["answers_json"] or "{}")),
+                "subjects": [{"slug": s, "title": titles.get(s, (s, ""))[0], "color": titles.get(s, ("", "#0f5a57"))[1]}
+                             for s in slugs],
+            })
+        return out
+
+    def detail(self, conn, user, quiz_id: int) -> dict:
+        """A past assessment. Finished ones include the answers, results and breakdown for review."""
+        quiz = conn.execute("SELECT * FROM quizzes WHERE id = ? AND user_id = ?", (quiz_id, user["id"])).fetchone()
+        if quiz is None:
+            raise QuizError("Quiz not found")
+        questions = json.loads(quiz["questions_json"])
+        slugs = json.loads(quiz["subjects_json"]) if quiz["subjects_json"] else [quiz["subject"]]
+        docs = [d for d in (knowledge.get_document(conn, s) for s in slugs) if d]
+        public = self._public(quiz["id"], docs, quiz["topic"] or "", quiz["difficulty"], quiz["mode"] or "practice",
+                              quiz["time_limit"], quiz["engine"], questions)
+        public.update(created_at=quiz["created_at"], completed_at=quiz["completed_at"], language=quiz["language"])
+        if quiz["completed_at"]:
+            answers = json.loads(quiz["answers_json"] or "{}")
+            breakdown: dict[str, dict] = {}
+            for i, q in enumerate(questions):
+                entry = breakdown.setdefault(q.get("subject") or "", {"subject": q.get("subject_title") or "", "correct": 0, "total": 0})
+                entry["total"] += 1
+                entry["correct"] += answers.get(str(i)) == q["answer_index"]
+            public["finished"] = {
+                "score": quiz["score"], "total": quiz["total"], "duration_s": quiz["duration_s"],
+                "breakdown": list(breakdown.values()),
+                "results": [{"choice": answers.get(str(i)), "correct": answers.get(str(i)) == q["answer_index"],
+                             "answer_index": q["answer_index"], "explanation": q["explanation"]}
+                            for i, q in enumerate(questions)],
+            }
+        return public
+
+    def retake(self, conn, user, quiz_id: int) -> dict:
+        """Take a past assessment again: the same questions, with questions and options reshuffled."""
+        quiz = conn.execute("SELECT * FROM quizzes WHERE id = ? AND user_id = ?", (quiz_id, user["id"])).fetchone()
+        if quiz is None:
+            raise QuizError("Quiz not found")
+        questions = [_shuffle_options(q) for q in json.loads(quiz["questions_json"])]
+        random.shuffle(questions)
+        slugs = json.loads(quiz["subjects_json"]) if quiz["subjects_json"] else [quiz["subject"]]
+        docs = [d for d in (knowledge.get_document(conn, s) for s in slugs) if d]
+        mode = quiz["mode"] or "practice"
+        cur = conn.execute(
+            """INSERT INTO quizzes (user_id, subject, subjects_json, topic, language, difficulty, questions_json,
+                                    answers_json, total, engine, mode, time_limit, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)""",
+            (user["id"], quiz["subject"], quiz["subjects_json"], quiz["topic"], quiz["language"], quiz["difficulty"],
+             json.dumps(questions, ensure_ascii=False), len(questions), quiz["engine"], mode, quiz["time_limit"], now_iso()),
+        )
+        conn.commit()
+        return self._public(cur.lastrowid, docs, quiz["topic"] or "", quiz["difficulty"], mode, quiz["time_limit"],
+                            quiz["engine"], questions)
+
+    def delete(self, conn, user, quiz_id: int) -> None:
+        cur = conn.execute("DELETE FROM quizzes WHERE id = ? AND user_id = ?", (quiz_id, user["id"]))
+        if not cur.rowcount:
+            raise QuizError("Quiz not found")
+        conn.commit()

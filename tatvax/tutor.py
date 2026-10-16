@@ -15,9 +15,9 @@ from .translation import TranslationError, Translator
 log = logging.getLogger(__name__)
 
 HISTORY_MESSAGES = 16
-# Notes up to this size go into the prompt whole; larger scopes ("All subjects") send only the
-# best-matching sections, which keeps answers fast on NVIDIA's free tier.
-INLINE_LIBRARY_LIMIT = 24_000
+# Notes up to this size go into the prompt whole; anything larger sends only the best-matching
+# sections. Short prompts are what keep the first words of an answer arriving quickly.
+INLINE_LIBRARY_LIMIT = 4_000
 
 TUTOR_PROMPT = """You are TatvaX, a warm and patient AI tutor for school students in India (classes 1-12). \
 Students write in many Indian languages and often mix languages; always reply in the language named in the \
@@ -38,13 +38,9 @@ Keep everything age-appropriate. If a student seems upset, unsafe or mentions se
 encourage them to talk to a parent, teacher or another trusted adult, and mention that they can call the \
 free Tele-MANAS helpline at 14416."""
 
-HELPDESK_PROMPT = """You are TatvaX, the friendly help desk assistant for a school in India. You answer \
-questions from students and parents about admissions, fees, timings, exams, transport, facilities and school \
-rules. Reply in the language named in the student context, in short clear sentences, without emoji.
+HELPDESK_PROMPT = """You are TatvAI, the friendly AI companion of a school in India. Students and parents chat with you about anything school-related: admissions, fees, timings, exams, transport, facilities and rules, as well as study plans, exam preparation, motivation and everyday learning questions. Reply in the language named in the student context, in short clear sentences, without emoji.
 
-Answer only from the school information provided below. Never guess or invent fees, dates, phone numbers, \
-names or policies; if the answer isn't in the information, say so plainly and suggest contacting the school \
-office. Use short lists for steps or requirements. Keep everything respectful and age-appropriate."""
+For questions about this school, use only the school information provided below. Never guess or invent fees, dates, phone numbers, names or policies; if a school detail isn't in the information, say so plainly and suggest contacting the school office. For general study or wellbeing questions, help warmly and practically. Use short lists for steps or requirements. Keep everything respectful and age-appropriate. If a student seems upset, unsafe or mentions self-harm, respond with care, encourage them to talk to a trusted adult, and mention the free Tele-MANAS helpline at 14416."""
 
 NOT_FOUND = {
     "subject": (
@@ -52,7 +48,7 @@ NOT_FOUND = {
         "pick a more specific subject, or ask your teacher."
     ),
     "helpdesk": (
-        "I couldn't find that in the school's help-desk information. "
+        "I couldn't find that in the school's information. "
         "Please contact the school office for the exact details."
     ),
 }
@@ -71,7 +67,7 @@ class Tutor:
         if mode == "helpdesk":
             docs = [d for d in knowledge.list_documents(conn, "helpdesk")]
             if not docs:
-                raise ValueError("The help desk has no information yet")
+                raise ValueError("TatvAI has no school information yet")
             return [knowledge.get_document(conn, d["slug"]) for d in docs], docs[0]["slug"]
         if mode != "subject":
             raise ValueError("Unknown mode")
@@ -105,7 +101,7 @@ class Tutor:
         return f"{prompt}\n\n<library>\n{notes}\n</library>", True
 
     def retrieved_notes(self, conn, question: str, docs: list[dict]) -> str:
-        hits = library_index.search(conn, question, [d["slug"] for d in docs], limit=8)
+        hits = library_index.search(conn, question, [d["slug"] for d in docs], limit=6)
         if not hits:
             return ""
         joined = "\n\n".join(f"### {s.doc_title} › {s.heading}\n{s.text}" for s, _ in hits)
@@ -250,7 +246,7 @@ class Tutor:
         if len(suggestions) < 2:
             suggestions = self.note_suggestions(conn, question, mode, docs, language, asked)
 
-        conn.execute(
+        asked_row = conn.execute(
             "INSERT INTO messages (conversation_id, role, content, api_content, language, created_at) VALUES (?, 'user', ?, ?, ?, ?)",
             (conversation_id, question, api_question if engine == "ai" else None, language, now_iso()),
         )
@@ -267,6 +263,7 @@ class Tutor:
         yield {
             "type": "done",
             "message_id": cur.lastrowid,
+            "user_message_id": asked_row.lastrowid,
             "engine": engine,
             "sources": sources,
             "suggestions": suggestions,

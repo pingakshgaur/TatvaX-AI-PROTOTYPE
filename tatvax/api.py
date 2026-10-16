@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 
 from flask import Blueprint, Response, current_app, request, stream_with_context
 
@@ -35,7 +36,7 @@ def bootstrap():
         "app": {
             "version": current_app.config["VERSION"],
             "ai_enabled": ai.available,
-            "ai_provider": "NVIDIA",
+            "ai_provider": ai.status()["provider"],
             "ai_model": ai.model if ai.available else None,
             "languages": languages.as_list(),
             "subjects": knowledge.list_documents(db, "subject"),
@@ -137,6 +138,20 @@ def conversation(conversation_id: int):
     return {"conversation": dict(convo), "messages": messages}
 
 
+@bp.post("/conversations/<int:conversation_id>/rewind")
+def rewind_conversation(conversation_id: int):
+    """Remove a question and everything after it, so an edited question can be asked in its place."""
+    if _own_conversation(conversation_id) is None:
+        return error("Conversation not found", 404)
+    message_id = (request.get_json(silent=True) or {}).get("message_id")
+    if not isinstance(message_id, int):
+        return error("Send the message_id of the question to edit")
+    db = get_db()
+    cur = db.execute("DELETE FROM messages WHERE conversation_id = ? AND id >= ?", (conversation_id, message_id))
+    db.commit()
+    return {"removed": cur.rowcount}
+
+
 @bp.delete("/conversations/<int:conversation_id>")
 def delete_conversation(conversation_id: int):
     if _own_conversation(conversation_id) is None:
@@ -213,6 +228,79 @@ def retry_quiz(quiz_id: int):
         return {"quiz": services().quizmaster.retry_mistakes(get_db(), user, quiz_id)}, 201
     except QuizError as exc:
         return error(str(exc), 404 if "not found" in str(exc) else 400)
+
+
+@bp.get("/quizzes")
+def quiz_history():
+    user = current_user()
+    if user is None:
+        return {"quizzes": []}
+    return {"quizzes": services().quizmaster.history(get_db(), user)}
+
+
+@bp.get("/quiz/<int:quiz_id>")
+def quiz_detail(quiz_id: int):
+    user = current_user()
+    if user is None:
+        return error("Quiz not found", 404)
+    try:
+        return {"quiz": services().quizmaster.detail(get_db(), user, quiz_id)}
+    except QuizError as exc:
+        return error(str(exc), 404)
+
+
+@bp.post("/quiz/<int:quiz_id>/retake")
+def retake_quiz(quiz_id: int):
+    user = current_user()
+    if user is None:
+        return error("Quiz not found", 404)
+    try:
+        return {"quiz": services().quizmaster.retake(get_db(), user, quiz_id)}, 201
+    except QuizError as exc:
+        return error(str(exc), 404)
+
+
+@bp.delete("/quiz/<int:quiz_id>")
+def delete_quiz(quiz_id: int):
+    user = current_user()
+    if user is None:
+        return error("Quiz not found", 404)
+    try:
+        services().quizmaster.delete(get_db(), user, quiz_id)
+    except QuizError as exc:
+        return error(str(exc), 404)
+    return {"ok": True}
+
+
+@bp.get("/subjects/overview")
+def subjects_overview():
+    """Per-subject facts for the Subjects page: size of the notes and the learner's own activity."""
+    db = get_db()
+    user = current_user()
+    out = []
+    for doc in knowledge.list_documents(db, "subject"):
+        body = knowledge.get_document(db, doc["slug"])["body"]
+        sections = knowledge.split_sections(doc["slug"], doc["title"], body)
+        item = {
+            "slug": doc["slug"],
+            "chapters": sum(1 for line in body.splitlines() if line.startswith("## ")),
+            "chapter_titles": [re.sub(r"^Chapter\s+\d+\s*[:.-]\s*", "", line[3:].strip(), flags=re.I)
+                               for line in body.splitlines() if line.startswith("## ")][:8],
+            "topics": len(sections),
+            "questions": 0, "quizzes": 0, "average": None, "last_active": None,
+        }
+        if user is not None:
+            q = db.execute("SELECT COUNT(*), MAX(created_at) FROM question_log WHERE user_id = ? AND subject = ?",
+                           (user["id"], doc["slug"])).fetchone()
+            z = db.execute(
+                """SELECT COUNT(*), AVG(100.0 * score / total), MAX(completed_at) FROM quizzes
+                   WHERE user_id = ? AND completed_at IS NOT NULL AND (subject = ? OR subjects_json LIKE ?)""",
+                (user["id"], doc["slug"], f'%"{doc["slug"]}"%'),
+            ).fetchone()
+            item.update(questions=q[0], quizzes=z[0], average=round(z[1]) if z[1] is not None else None,
+                        last_active=max(filter(None, [q[1], z[2]]), default=None))
+        out.append(item)
+    return {"subjects": out}
 
 
 # --------------------------------------------------------------------------- progress

@@ -12,6 +12,8 @@ import "katex/dist/katex.min.css";
 import "./styles/tokens.css";
 import "./styles/app.css";
 import "./styles/experience.css";
+import "./styles/v251.css";
+import "./styles/print.css";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

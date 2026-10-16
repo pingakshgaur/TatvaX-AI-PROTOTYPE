@@ -1,4 +1,4 @@
-"""TatvaX v2: a multilingual AI tutor and school help desk."""
+"""TatvaX v2.5: a multilingual AI tutor, assessment platform and AI school companion (TatvAI)."""
 
 import logging
 import os
@@ -8,7 +8,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
 
-from . import admin, api, db, knowledge, users
+from . import admin, api, db, knowledge, todos, users
 from .ai import AIService
 from .config import build_config
 from .quiz import QuizMaster
@@ -16,7 +16,7 @@ from .security import require_json_for_writes
 from .translation import Translator
 from .tutor import Tutor
 
-__version__ = "2.0.0"
+__version__ = "2.5.1"
 
 
 @dataclass
@@ -84,7 +84,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     ai = AIService(app.config["NVIDIA_API_KEY"], app.config["AI_MODEL"], allowed=app.config["AI_ALLOWED"])
     conn = db.connect(app.config["DATABASE"])
     try:
-        ai.configure(db.get_setting(conn, "nvidia_api_key"), db.get_setting(conn, "ai_model"))
+        ai.load({row["key"]: row["value"] for row in conn.execute("SELECT key, value FROM settings")})
     finally:
         conn.close()
     translator = Translator(ai)
@@ -95,12 +95,13 @@ def create_app(overrides: dict | None = None) -> Flask:
         quizmaster=QuizMaster(ai, translator, app.config["CONTENT_DIR"]),
     )
     app.logger.info(
-        "AI tutor: %s", f"NVIDIA ({ai.model})" if ai.available else "off - add a free NVIDIA API key in the teacher console"
+        "AI tutor: %s", f"{ai.state.provider.name} ({ai.model})" if ai.available else "off - add a free NVIDIA API key in the teacher console"
     )
 
     app.register_blueprint(users.bp)
     app.register_blueprint(api.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(todos.bp)
     app.before_request(require_json_for_writes)
     app.teardown_appcontext(db.close_db)
 

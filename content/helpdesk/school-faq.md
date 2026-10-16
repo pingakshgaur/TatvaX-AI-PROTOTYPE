@@ -1,5 +1,5 @@
 ---
-title: School Help Desk
+title: School Information
 description: Admissions, fees, exams, timings and school policies
 icon: school
 color: "#7c3aed"

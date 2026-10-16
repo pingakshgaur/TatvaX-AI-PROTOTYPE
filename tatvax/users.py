@@ -56,7 +56,7 @@ def _merge_guest_into(db, guest_id: int, user_id: int) -> None:
     """Move a guest's conversations, quizzes and progress onto a real account."""
     if guest_id == user_id:
         return
-    for table in ("conversations", "quizzes", "question_log", "xp_events"):
+    for table in ("conversations", "quizzes", "question_log", "xp_events", "todos"):
         db.execute(f"UPDATE {table} SET user_id = ? WHERE user_id = ?", (user_id, guest_id))
     db.execute(
         """INSERT INTO activity (user_id, day, questions, quizzes)

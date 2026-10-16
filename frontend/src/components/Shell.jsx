@@ -1,5 +1,5 @@
 import {
-  BookOpen, Building2, ClipboardCheck, Languages, LayoutGrid, Library, Menu, ShieldCheck,
+  BookOpen, ClipboardCheck, Languages, LayoutGrid, Library, ListChecks, Menu, ShieldCheck, Sparkles,
 } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -25,7 +25,7 @@ export function useCrumbs(crumbs) {
 }
 
 function Sidebar({ open, onNavigate }) {
-  const { t, user, app, lang, setLang } = useApp();
+  const { t, user, app } = useApp();
   const location = useLocation();
   const learnActive = location.pathname.startsWith("/learn") || location.pathname === "/subjects";
   const link = (to, Icon, label, color, { end = false, active } = {}) => (
@@ -48,13 +48,14 @@ function Sidebar({ open, onNavigate }) {
           <span className="eyebrow">{t("group_learn")}</span>
           {link("/", LayoutGrid, t("nav_overview"), "var(--c-teal)", { end: true })}
           {link("/subjects", Library, t("nav_subjects"), "var(--c-indigo)", { active: learnActive })}
-          {link("/helpdesk", Building2, t("nav_helpdesk"), "var(--c-plum)")}
+          {link("/tatvai", Sparkles, t("nav_helpdesk"), "var(--c-plum)")}
         </div>
         <div className="nav-group">
           <span className="eyebrow">{t("group_practice")}</span>
           {link("/assessments", ClipboardCheck, t("nav_quiz"), "var(--c-coral)")}
           {link("/notes", BookOpen, t("nav_library"), "var(--c-saffron)")}
           {link("/translate", Languages, t("nav_translate"), "var(--c-leaf)")}
+          {link("/todos", ListChecks, "To-do list", "var(--c-indigo)")}
         </div>
         {user?.role === "teacher" && (
           <div className="nav-group">
@@ -63,14 +64,6 @@ function Sidebar({ open, onNavigate }) {
           </div>
         )}
       </nav>
-      <div className="sidebar-footer">
-        <div>
-          <label className="eyebrow" htmlFor="lang-select" style={{ display: "block", marginBottom: 6 }}>{t("language")}</label>
-          <select id="lang-select" className="select" value={lang} onChange={(e) => setLang(e.target.value)}>
-            {app.languages.map((l) => <option key={l.code} value={l.code}>{l.native}{l.code !== "en" ? ` (${l.name})` : ""}</option>)}
-          </select>
-        </div>
-      </div>
     </aside>
   );
 }
@@ -104,7 +97,7 @@ export default function Shell() {
     return () => document.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  const fullBleed = location.pathname.startsWith("/learn") || location.pathname.startsWith("/helpdesk");
+  const fullBleed = location.pathname.startsWith("/learn") || location.pathname.startsWith("/tatvai");
 
   return (
     <ShellContext.Provider value={{ setCrumbs, openAccount, openFeedback }}>
@@ -133,7 +126,7 @@ export default function Shell() {
                 <span className="dot" aria-hidden="true" />
                 <span className="label">{app.ai_enabled ? t("ai_online") : t("ai_offline")}</span>
               </span>
-              <ProfileMenu onAccount={openAccount} onFeedback={openFeedback} />
+              <ProfileMenu onAccount={openAccount} />
             </div>
           </header>
           {!online && <div className="offline-bar" role="status">{t("offline")}</div>}
@@ -144,7 +137,7 @@ export default function Shell() {
           </main>
         </div>
       </div>
-      <AccountDialog open={dialog?.name === "account"} initialTab={dialog?.tab} onClose={closeDialog} />
+      <AccountDialog open={dialog?.name === "account"} initialTab={dialog?.tab} onClose={closeDialog} onFeedback={openFeedback} />
       <FeedbackDialog open={dialog?.name === "feedback"} onClose={closeDialog} />
       <Toasts />
       <Celebration />

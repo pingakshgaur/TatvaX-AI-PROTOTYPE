@@ -4,7 +4,7 @@
 const STRINGS = {
   en: {
     group_learn: "Learn", group_practice: "Practice", group_account: "You", group_admin: "Administration",
-    nav_overview: "Overview", nav_subjects: "Subjects", nav_helpdesk: "Help desk", nav_quiz: "Assessments",
+    nav_overview: "Overview", nav_subjects: "Subjects", nav_helpdesk: "TatvAI", nav_quiz: "Assessments",
     nav_library: "Study notes", nav_translate: "Translator", nav_progress: "Progress", nav_teacher: "Teacher console",
     hero_eyebrow: "Multilingual learning platform",
     hero_title: "Learn anything, in your language",
@@ -12,7 +12,7 @@ const STRINGS = {
     hero_placeholder: "Ask any study question",
     ask: "Ask",
     card_learn: "Subject tutor", card_learn_desc: "Step-by-step explanations in mathematics, science, English and social studies.",
-    card_helpdesk: "School help desk", card_helpdesk_desc: "Admissions, fees, examinations, rules and facilities.",
+    card_helpdesk: "TatvAI", card_helpdesk_desc: "Your AI companion for school questions, study plans and quick help.",
     card_quiz: "Assessments", card_quiz_desc: "Short multiple-choice assessments with instant feedback.",
     card_library: "Study notes", card_library_desc: "The school's notes for every subject, available offline.",
     open: "Open",
@@ -21,7 +21,7 @@ const STRINGS = {
     ask_placeholder: "Ask a question", send: "Send", stop: "Stop", new_chat: "New session", history: "Sessions",
     no_history: "No sessions yet.",
     welcome_subject: "Ask anything about {subject}. TatvaX explains step by step, works through problems with you and checks your understanding.",
-    welcome_helpdesk: "Ask about admissions, fees, examinations, rules or facilities.",
+    welcome_helpdesk: "Hi, I am TatvAI. Ask me about admissions, fees, examinations, rules and facilities, or for help planning your studies.",
     try_asking: "Try asking",
     listening: "Listening. Speak now.", voice_input: "Speak your question",
     voice_unsupported: "Voice input isn't supported in this browser. Try Chrome or Edge.",
@@ -61,14 +61,14 @@ const STRINGS = {
 
   hi: {
     group_learn: "सीखें", group_practice: "अभ्यास", group_account: "आप", group_admin: "प्रशासन",
-    nav_overview: "अवलोकन", nav_subjects: "विषय", nav_helpdesk: "सहायता केंद्र", nav_quiz: "मूल्यांकन",
+    nav_overview: "अवलोकन", nav_subjects: "विषय", nav_helpdesk: "TatvAI", nav_quiz: "मूल्यांकन",
     nav_library: "अध्ययन नोट्स", nav_progress: "प्रगति", nav_teacher: "शिक्षक कंसोल",
     hero_eyebrow: "बहुभाषी शिक्षण मंच",
     hero_title: "कुछ भी सीखें, अपनी भाषा में",
     hero_sub: "सवाल पूछें, मूल्यांकन दें और अपनी प्रगति देखें — 13 भारतीय भाषाओं में, लिखकर या बोलकर।",
     hero_placeholder: "पढ़ाई से जुड़ा कोई भी सवाल पूछें", ask: "पूछें",
     card_learn: "विषय शिक्षक", card_learn_desc: "गणित, विज्ञान, अंग्रेज़ी और सामाजिक अध्ययन में कदम-दर-कदम व्याख्या।",
-    card_helpdesk: "स्कूल सहायता केंद्र", card_helpdesk_desc: "प्रवेश, फीस, परीक्षा, नियम और सुविधाएँ।",
+    card_helpdesk: "TatvAI", card_helpdesk_desc: "प्रवेश, फीस, परीक्षा, नियम और सुविधाएँ।",
     card_quiz: "मूल्यांकन", card_quiz_desc: "तुरंत प्रतिक्रिया के साथ छोटे बहुविकल्पीय मूल्यांकन।",
     card_library: "अध्ययन नोट्स", card_library_desc: "हर विषय के स्कूल नोट्स, ऑफ़लाइन भी उपलब्ध।",
     open: "खोलें", choose_subject: "विषय", choose_subject_sub: "सत्र शुरू करने के लिए विषय चुनें।", all_subjects: "सभी विषय",
@@ -87,12 +87,12 @@ const STRINGS = {
 
   bn: {
     group_learn: "শিখুন", group_practice: "অনুশীলন", group_account: "আপনি",
-    nav_overview: "সংক্ষিপ্ত বিবরণ", nav_subjects: "বিষয়", nav_helpdesk: "সহায়তা কেন্দ্র", nav_quiz: "মূল্যায়ন",
+    nav_overview: "সংক্ষিপ্ত বিবরণ", nav_subjects: "বিষয়", nav_helpdesk: "TatvAI", nav_quiz: "মূল্যায়ন",
     nav_library: "পড়ার নোট", nav_progress: "অগ্রগতি", nav_teacher: "শিক্ষক কনসোল",
     hero_title: "যেকোনো কিছু শিখুন, নিজের ভাষায়",
     hero_sub: "প্রশ্ন করুন, মূল্যায়ন দিন আর নিজের অগ্রগতি দেখুন — ১৩টি ভারতীয় ভাষায়, লিখে বা বলে।",
     hero_placeholder: "পড়াশোনার যেকোনো প্রশ্ন করুন", ask: "জিজ্ঞাসা করুন",
-    card_learn: "বিষয় শিক্ষক", card_helpdesk: "স্কুল সহায়তা কেন্দ্র", card_quiz: "মূল্যায়ন", card_library: "পড়ার নোট",
+    card_learn: "বিষয় শিক্ষক", card_helpdesk: "TatvAI", card_quiz: "মূল্যায়ন", card_library: "পড়ার নোট",
     choose_subject: "বিষয়", all_subjects: "সব বিষয়", ask_placeholder: "আপনার প্রশ্ন লিখুন", send: "পাঠান", new_chat: "নতুন সেশন",
     welcome_subject: "{subject} নিয়ে যেকোনো প্রশ্ন করুন। TatvaX ধাপে ধাপে বুঝিয়ে দেবে।",
     welcome_helpdesk: "ভর্তি, ফি, পরীক্ষা, নিয়ম বা সুবিধা নিয়ে জিজ্ঞাসা করুন।",
@@ -102,12 +102,12 @@ const STRINGS = {
 
   mr: {
     group_learn: "शिका", group_practice: "सराव", group_account: "तुम्ही",
-    nav_overview: "आढावा", nav_subjects: "विषय", nav_helpdesk: "मदत केंद्र", nav_quiz: "मूल्यमापन",
+    nav_overview: "आढावा", nav_subjects: "विषय", nav_helpdesk: "TatvAI", nav_quiz: "मूल्यमापन",
     nav_library: "अभ्यास नोट्स", nav_progress: "प्रगती", nav_teacher: "शिक्षक कन्सोल",
     hero_title: "काहीही शिका, आपल्या भाषेत",
     hero_sub: "प्रश्न विचारा, मूल्यमापन द्या आणि आपली प्रगती पहा — 13 भारतीय भाषांमध्ये, लिहून किंवा बोलून.",
     hero_placeholder: "अभ्यासाचा कोणताही प्रश्न विचारा", ask: "विचारा",
-    card_learn: "विषय शिक्षक", card_helpdesk: "शाळा मदत केंद्र", card_quiz: "मूल्यमापन", card_library: "अभ्यास नोट्स",
+    card_learn: "विषय शिक्षक", card_helpdesk: "TatvAI", card_quiz: "मूल्यमापन", card_library: "अभ्यास नोट्स",
     choose_subject: "विषय", all_subjects: "सर्व विषय", ask_placeholder: "तुमचा प्रश्न लिहा", send: "पाठवा", new_chat: "नवीन सत्र",
     welcome_subject: "{subject} बद्दल काहीही विचारा. TatvaX टप्प्याटप्प्याने समजावून सांगेल.",
     welcome_helpdesk: "प्रवेश, शुल्क, परीक्षा, नियम किंवा सुविधांबद्दल विचारा.",
@@ -117,12 +117,12 @@ const STRINGS = {
 
   te: {
     group_learn: "నేర్చుకోండి", group_practice: "సాధన", group_account: "మీరు",
-    nav_overview: "అవలోకనం", nav_subjects: "విషయాలు", nav_helpdesk: "సహాయ కేంద్రం", nav_quiz: "మూల్యాంకనాలు",
+    nav_overview: "అవలోకనం", nav_subjects: "విషయాలు", nav_helpdesk: "TatvAI", nav_quiz: "మూల్యాంకనాలు",
     nav_library: "చదువు నోట్స్", nav_progress: "ప్రగతి", nav_teacher: "ఉపాధ్యాయ కన్సోల్",
     hero_title: "ఏదైనా నేర్చుకోండి, మీ భాషలో",
     hero_sub: "ప్రశ్నలు అడగండి, మూల్యాంకనాలు రాయండి, మీ ప్రగతిని చూడండి — 13 భారతీయ భాషల్లో.",
     hero_placeholder: "చదువుకు సంబంధించిన ఏ ప్రశ్న అయినా అడగండి", ask: "అడగండి",
-    card_learn: "విషయ బోధకుడు", card_helpdesk: "పాఠశాల సహాయ కేంద్రం", card_quiz: "మూల్యాంకనాలు", card_library: "చదువు నోట్స్",
+    card_learn: "విషయ బోధకుడు", card_helpdesk: "TatvAI", card_quiz: "మూల్యాంకనాలు", card_library: "చదువు నోట్స్",
     choose_subject: "విషయాలు", all_subjects: "అన్ని విషయాలు", ask_placeholder: "మీ ప్రశ్న రాయండి", send: "పంపండి", new_chat: "కొత్త సెషన్",
     welcome_subject: "{subject} గురించి ఏదైనా అడగండి. TatvaX దశలవారీగా వివరిస్తుంది.",
     welcome_helpdesk: "ప్రవేశాలు, ఫీజులు, పరీక్షలు, నియమాలు లేదా సౌకర్యాల గురించి అడగండి.",
@@ -132,12 +132,12 @@ const STRINGS = {
 
   ta: {
     group_learn: "கற்க", group_practice: "பயிற்சி", group_account: "நீங்கள்",
-    nav_overview: "கண்ணோட்டம்", nav_subjects: "பாடங்கள்", nav_helpdesk: "உதவி மையம்", nav_quiz: "மதிப்பீடுகள்",
+    nav_overview: "கண்ணோட்டம்", nav_subjects: "பாடங்கள்", nav_helpdesk: "TatvAI", nav_quiz: "மதிப்பீடுகள்",
     nav_library: "படிப்புக் குறிப்புகள்", nav_progress: "முன்னேற்றம்", nav_teacher: "ஆசிரியர் பணியகம்",
     hero_title: "எதையும் கற்றுக்கொள்ளுங்கள், உங்கள் மொழியில்",
     hero_sub: "கேள்விகள் கேளுங்கள், மதிப்பீடுகள் எழுதுங்கள், உங்கள் முன்னேற்றத்தைப் பாருங்கள் — 13 இந்திய மொழிகளில்.",
     hero_placeholder: "படிப்பு தொடர்பான எந்தக் கேள்வியையும் கேளுங்கள்", ask: "கேளுங்கள்",
-    card_learn: "பாட ஆசிரியர்", card_helpdesk: "பள்ளி உதவி மையம்", card_quiz: "மதிப்பீடுகள்", card_library: "படிப்புக் குறிப்புகள்",
+    card_learn: "பாட ஆசிரியர்", card_helpdesk: "TatvAI", card_quiz: "மதிப்பீடுகள்", card_library: "படிப்புக் குறிப்புகள்",
     choose_subject: "பாடங்கள்", all_subjects: "அனைத்துப் பாடங்களும்", ask_placeholder: "உங்கள் கேள்வியை எழுதுங்கள்", send: "அனுப்பு", new_chat: "புதிய அமர்வு",
     welcome_subject: "{subject} பற்றி எதையும் கேளுங்கள். TatvaX படிப்படியாக விளக்கும்.",
     welcome_helpdesk: "சேர்க்கை, கட்டணம், தேர்வுகள், விதிகள் அல்லது வசதிகள் பற்றிக் கேளுங்கள்.",
@@ -147,12 +147,12 @@ const STRINGS = {
 
   gu: {
     group_learn: "શીખો", group_practice: "અભ્યાસ", group_account: "તમે",
-    nav_overview: "ઝાંખી", nav_subjects: "વિષયો", nav_helpdesk: "સહાય કેન્દ્ર", nav_quiz: "મૂલ્યાંકન",
+    nav_overview: "ઝાંખી", nav_subjects: "વિષયો", nav_helpdesk: "TatvAI", nav_quiz: "મૂલ્યાંકન",
     nav_library: "અભ્યાસ નોંધો", nav_progress: "પ્રગતિ", nav_teacher: "શિક્ષક કન્સોલ",
     hero_title: "કંઈ પણ શીખો, તમારી ભાષામાં",
     hero_sub: "પ્રશ્નો પૂછો, મૂલ્યાંકન આપો અને તમારી પ્રગતિ જુઓ — 13 ભારતીય ભાષાઓમાં, લખીને કે બોલીને.",
     hero_placeholder: "અભ્યાસનો કોઈ પણ પ્રશ્ન પૂછો", ask: "પૂછો",
-    card_learn: "વિષય શિક્ષક", card_helpdesk: "શાળા સહાય કેન્દ્ર", card_quiz: "મૂલ્યાંકન", card_library: "અભ્યાસ નોંધો",
+    card_learn: "વિષય શિક્ષક", card_helpdesk: "TatvAI", card_quiz: "મૂલ્યાંકન", card_library: "અભ્યાસ નોંધો",
     choose_subject: "વિષયો", all_subjects: "બધા વિષયો", ask_placeholder: "તમારો પ્રશ્ન લખો", send: "મોકલો", new_chat: "નવું સત્ર",
     welcome_subject: "{subject} વિશે કંઈ પણ પૂછો. TatvaX પગલાં-દર-પગલાં સમજાવશે.",
     welcome_helpdesk: "પ્રવેશ, ફી, પરીક્ષા, નિયમો કે સુવિધાઓ વિશે પૂછો.",
@@ -162,12 +162,12 @@ const STRINGS = {
 
   kn: {
     group_learn: "ಕಲಿಯಿರಿ", group_practice: "ಅಭ್ಯಾಸ", group_account: "ನೀವು",
-    nav_overview: "ಅವಲೋಕನ", nav_subjects: "ವಿಷಯಗಳು", nav_helpdesk: "ಸಹಾಯ ಕೇಂದ್ರ", nav_quiz: "ಮೌಲ್ಯಮಾಪನ",
+    nav_overview: "ಅವಲೋಕನ", nav_subjects: "ವಿಷಯಗಳು", nav_helpdesk: "TatvAI", nav_quiz: "ಮೌಲ್ಯಮಾಪನ",
     nav_library: "ಅಧ್ಯಯನ ಟಿಪ್ಪಣಿಗಳು", nav_progress: "ಪ್ರಗತಿ", nav_teacher: "ಶಿಕ್ಷಕರ ಕನ್ಸೋಲ್",
     hero_title: "ಏನನ್ನಾದರೂ ಕಲಿಯಿರಿ, ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ",
     hero_sub: "ಪ್ರಶ್ನೆ ಕೇಳಿ, ಮೌಲ್ಯಮಾಪನ ಬರೆಯಿರಿ ಮತ್ತು ನಿಮ್ಮ ಪ್ರಗತಿಯನ್ನು ನೋಡಿ — 13 ಭಾರತೀಯ ಭಾಷೆಗಳಲ್ಲಿ.",
     hero_placeholder: "ಓದಿಗೆ ಸಂಬಂಧಿಸಿದ ಯಾವುದೇ ಪ್ರಶ್ನೆ ಕೇಳಿ", ask: "ಕೇಳಿ",
-    card_learn: "ವಿಷಯ ಶಿಕ್ಷಕ", card_helpdesk: "ಶಾಲಾ ಸಹಾಯ ಕೇಂದ್ರ", card_quiz: "ಮೌಲ್ಯಮಾಪನ", card_library: "ಅಧ್ಯಯನ ಟಿಪ್ಪಣಿಗಳು",
+    card_learn: "ವಿಷಯ ಶಿಕ್ಷಕ", card_helpdesk: "TatvAI", card_quiz: "ಮೌಲ್ಯಮಾಪನ", card_library: "ಅಧ್ಯಯನ ಟಿಪ್ಪಣಿಗಳು",
     choose_subject: "ವಿಷಯಗಳು", all_subjects: "ಎಲ್ಲಾ ವಿಷಯಗಳು", ask_placeholder: "ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಬರೆಯಿರಿ", send: "ಕಳುಹಿಸಿ", new_chat: "ಹೊಸ ಅವಧಿ",
     welcome_subject: "{subject} ಬಗ್ಗೆ ಏನಾದರೂ ಕೇಳಿ. TatvaX ಹಂತ ಹಂತವಾಗಿ ವಿವರಿಸುತ್ತದೆ.",
     welcome_helpdesk: "ಪ್ರವೇಶ, ಶುಲ್ಕ, ಪರೀಕ್ಷೆ, ನಿಯಮಗಳು ಅಥವಾ ಸೌಲಭ್ಯಗಳ ಬಗ್ಗೆ ಕೇಳಿ.",
@@ -177,12 +177,12 @@ const STRINGS = {
 
   ml: {
     group_learn: "പഠനം", group_practice: "പരിശീലനം", group_account: "നിങ്ങൾ",
-    nav_overview: "അവലോകനം", nav_subjects: "വിഷയങ്ങൾ", nav_helpdesk: "സഹായ കേന്ദ്രം", nav_quiz: "മൂല്യനിർണയം",
+    nav_overview: "അവലോകനം", nav_subjects: "വിഷയങ്ങൾ", nav_helpdesk: "TatvAI", nav_quiz: "മൂല്യനിർണയം",
     nav_library: "പഠന കുറിപ്പുകൾ", nav_progress: "പുരോഗതി", nav_teacher: "അധ്യാപക കൺസോൾ",
     hero_title: "എന്തും പഠിക്കാം, നിങ്ങളുടെ ഭാഷയിൽ",
     hero_sub: "ചോദ്യങ്ങൾ ചോദിക്കൂ, മൂല്യനിർണയങ്ങൾ എഴുതൂ, പുരോഗതി കാണൂ — 13 ഇന്ത്യൻ ഭാഷകളിൽ.",
     hero_placeholder: "പഠനവുമായി ബന്ധപ്പെട്ട ഏത് ചോദ്യവും ചോദിക്കൂ", ask: "ചോദിക്കൂ",
-    card_learn: "വിഷയ അധ്യാപകൻ", card_helpdesk: "സ്കൂൾ സഹായ കേന്ദ്രം", card_quiz: "മൂല്യനിർണയം", card_library: "പഠന കുറിപ്പുകൾ",
+    card_learn: "വിഷയ അധ്യാപകൻ", card_helpdesk: "TatvAI", card_quiz: "മൂല്യനിർണയം", card_library: "പഠന കുറിപ്പുകൾ",
     choose_subject: "വിഷയങ്ങൾ", all_subjects: "എല്ലാ വിഷയങ്ങളും", ask_placeholder: "നിങ്ങളുടെ ചോദ്യം എഴുതൂ", send: "അയയ്ക്കൂ", new_chat: "പുതിയ സെഷൻ",
     welcome_subject: "{subject} നെക്കുറിച്ച് എന്തും ചോദിക്കൂ. TatvaX ഘട്ടം ഘട്ടമായി വിശദീകരിക്കും.",
     welcome_helpdesk: "പ്രവേശനം, ഫീസ്, പരീക്ഷ, നിയമങ്ങൾ, സൗകര്യങ്ങൾ എന്നിവയെക്കുറിച്ച് ചോദിക്കൂ.",
@@ -192,12 +192,12 @@ const STRINGS = {
 
   pa: {
     group_learn: "ਸਿੱਖੋ", group_practice: "ਅਭਿਆਸ", group_account: "ਤੁਸੀਂ",
-    nav_overview: "ਸੰਖੇਪ", nav_subjects: "ਵਿਸ਼ੇ", nav_helpdesk: "ਸਹਾਇਤਾ ਕੇਂਦਰ", nav_quiz: "ਮੁਲਾਂਕਣ",
+    nav_overview: "ਸੰਖੇਪ", nav_subjects: "ਵਿਸ਼ੇ", nav_helpdesk: "TatvAI", nav_quiz: "ਮੁਲਾਂਕਣ",
     nav_library: "ਪੜ੍ਹਾਈ ਨੋਟਸ", nav_progress: "ਤਰੱਕੀ", nav_teacher: "ਅਧਿਆਪਕ ਕੰਸੋਲ",
     hero_title: "ਕੁਝ ਵੀ ਸਿੱਖੋ, ਆਪਣੀ ਭਾਸ਼ਾ ਵਿੱਚ",
     hero_sub: "ਸਵਾਲ ਪੁੱਛੋ, ਮੁਲਾਂਕਣ ਦਿਓ ਅਤੇ ਆਪਣੀ ਤਰੱਕੀ ਵੇਖੋ — 13 ਭਾਰਤੀ ਭਾਸ਼ਾਵਾਂ ਵਿੱਚ, ਲਿਖ ਕੇ ਜਾਂ ਬੋਲ ਕੇ।",
     hero_placeholder: "ਪੜ੍ਹਾਈ ਨਾਲ ਸੰਬੰਧਿਤ ਕੋਈ ਵੀ ਸਵਾਲ ਪੁੱਛੋ", ask: "ਪੁੱਛੋ",
-    card_learn: "ਵਿਸ਼ਾ ਅਧਿਆਪਕ", card_helpdesk: "ਸਕੂਲ ਸਹਾਇਤਾ ਕੇਂਦਰ", card_quiz: "ਮੁਲਾਂਕਣ", card_library: "ਪੜ੍ਹਾਈ ਨੋਟਸ",
+    card_learn: "ਵਿਸ਼ਾ ਅਧਿਆਪਕ", card_helpdesk: "TatvAI", card_quiz: "ਮੁਲਾਂਕਣ", card_library: "ਪੜ੍ਹਾਈ ਨੋਟਸ",
     choose_subject: "ਵਿਸ਼ੇ", all_subjects: "ਸਾਰੇ ਵਿਸ਼ੇ", ask_placeholder: "ਆਪਣਾ ਸਵਾਲ ਲਿਖੋ", send: "ਭੇਜੋ", new_chat: "ਨਵਾਂ ਸੈਸ਼ਨ",
     welcome_subject: "{subject} ਬਾਰੇ ਕੁਝ ਵੀ ਪੁੱਛੋ। TatvaX ਕਦਮ-ਦਰ-ਕਦਮ ਸਮਝਾਏਗਾ।",
     welcome_helpdesk: "ਦਾਖਲੇ, ਫੀਸ, ਪ੍ਰੀਖਿਆ, ਨਿਯਮਾਂ ਜਾਂ ਸਹੂਲਤਾਂ ਬਾਰੇ ਪੁੱਛੋ।",
@@ -207,12 +207,12 @@ const STRINGS = {
 
   or: {
     group_learn: "ଶିଖନ୍ତୁ", group_practice: "ଅଭ୍ୟାସ", group_account: "ଆପଣ",
-    nav_overview: "ସାରାଂଶ", nav_subjects: "ବିଷୟ", nav_helpdesk: "ସହାୟତା କେନ୍ଦ୍ର", nav_quiz: "ମୂଲ୍ୟାୟନ",
+    nav_overview: "ସାରାଂଶ", nav_subjects: "ବିଷୟ", nav_helpdesk: "TatvAI", nav_quiz: "ମୂଲ୍ୟାୟନ",
     nav_library: "ପଢ଼ା ନୋଟ୍ସ", nav_progress: "ପ୍ରଗତି", nav_teacher: "ଶିକ୍ଷକ କନ୍ସୋଲ",
     hero_title: "ଯାହା ବି ଶିଖନ୍ତୁ, ନିଜ ଭାଷାରେ",
     hero_sub: "ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ, ମୂଲ୍ୟାୟନ ଦିଅନ୍ତୁ ଏବଂ ନିଜ ପ୍ରଗତି ଦେଖନ୍ତୁ — 13ଟି ଭାରତୀୟ ଭାଷାରେ।",
     hero_placeholder: "ପଢ଼ା ସମ୍ବନ୍ଧୀୟ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ", ask: "ପଚାରନ୍ତୁ",
-    card_learn: "ବିଷୟ ଶିକ୍ଷକ", card_helpdesk: "ବିଦ୍ୟାଳୟ ସହାୟତା କେନ୍ଦ୍ର", card_quiz: "ମୂଲ୍ୟାୟନ", card_library: "ପଢ଼ା ନୋଟ୍ସ",
+    card_learn: "ବିଷୟ ଶିକ୍ଷକ", card_helpdesk: "TatvAI", card_quiz: "ମୂଲ୍ୟାୟନ", card_library: "ପଢ଼ା ନୋଟ୍ସ",
     choose_subject: "ବିଷୟ", all_subjects: "ସମସ୍ତ ବିଷୟ", ask_placeholder: "ଆପଣଙ୍କ ପ୍ରଶ୍ନ ଲେଖନ୍ତୁ", send: "ପଠାନ୍ତୁ", new_chat: "ନୂଆ ସେସନ",
     welcome_subject: "{subject} ବିଷୟରେ ଯାହା ବି ପଚାରନ୍ତୁ। TatvaX ପାହାଚ ପାହାଚ କରି ବୁଝାଇବ।",
     welcome_helpdesk: "ନାମଲେଖା, ଫି, ପରୀକ୍ଷା, ନିୟମ କିମ୍ବା ସୁବିଧା ବିଷୟରେ ପଚାରନ୍ତୁ।",
@@ -222,12 +222,12 @@ const STRINGS = {
 
   as: {
     group_learn: "শিকক", group_practice: "অনুশীলন", group_account: "আপুনি",
-    nav_overview: "আভাস", nav_subjects: "বিষয়", nav_helpdesk: "সহায়তা কেন্দ্ৰ", nav_quiz: "মূল্যায়ন",
+    nav_overview: "আভাস", nav_subjects: "বিষয়", nav_helpdesk: "TatvAI", nav_quiz: "মূল্যায়ন",
     nav_library: "অধ্যয়নৰ টোকা", nav_progress: "অগ্ৰগতি", nav_teacher: "শিক্ষক কনচ'ল",
     hero_title: "যিকোনো কথা শিকক, নিজৰ ভাষাত",
     hero_sub: "প্ৰশ্ন সোধক, মূল্যায়ন দিয়ক আৰু নিজৰ অগ্ৰগতি চাওক — ১৩টা ভাৰতীয় ভাষাত।",
     hero_placeholder: "পঢ়া-শুনাৰ যিকোনো প্ৰশ্ন সোধক", ask: "সোধক",
-    card_learn: "বিষয় শিক্ষক", card_helpdesk: "বিদ্যালয় সহায়তা কেন্দ্ৰ", card_quiz: "মূল্যায়ন", card_library: "অধ্যয়নৰ টোকা",
+    card_learn: "বিষয় শিক্ষক", card_helpdesk: "TatvAI", card_quiz: "মূল্যায়ন", card_library: "অধ্যয়নৰ টোকা",
     choose_subject: "বিষয়", all_subjects: "সকলো বিষয়", ask_placeholder: "আপোনাৰ প্ৰশ্ন লিখক", send: "পঠিয়াওক", new_chat: "নতুন অধিবেশন",
     welcome_subject: "{subject}ৰ বিষয়ে যিকোনো প্ৰশ্ন সোধক। TatvaX-এ খোজে খোজে বুজাই দিব।",
     welcome_helpdesk: "নামভৰ্তি, মাচুল, পৰীক্ষা, নিয়ম বা সুবিধাৰ বিষয়ে সোধক।",
@@ -237,12 +237,12 @@ const STRINGS = {
 
   ur: {
     group_learn: "سیکھیں", group_practice: "مشق", group_account: "آپ",
-    nav_overview: "جائزہ", nav_subjects: "مضامین", nav_helpdesk: "مدد مرکز", nav_quiz: "جانچ",
+    nav_overview: "جائزہ", nav_subjects: "مضامین", nav_helpdesk: "TatvAI", nav_quiz: "جانچ",
     nav_library: "مطالعہ نوٹس", nav_progress: "پیش رفت", nav_teacher: "استاد کنسول",
     hero_title: "کچھ بھی سیکھیں، اپنی زبان میں",
     hero_sub: "سوال پوچھیں، جانچ دیں اور اپنی پیش رفت دیکھیں — 13 ہندوستانی زبانوں میں، لکھ کر یا بول کر۔",
     hero_placeholder: "پڑھائی سے متعلق کوئی بھی سوال پوچھیں", ask: "پوچھیں",
-    card_learn: "مضمون استاد", card_helpdesk: "اسکول مدد مرکز", card_quiz: "جانچ", card_library: "مطالعہ نوٹس",
+    card_learn: "مضمون استاد", card_helpdesk: "TatvAI", card_quiz: "جانچ", card_library: "مطالعہ نوٹس",
     choose_subject: "مضامین", all_subjects: "تمام مضامین", ask_placeholder: "اپنا سوال لکھیں", send: "بھیجیں", new_chat: "نیا سیشن",
     welcome_subject: "{subject} کے بارے میں کچھ بھی پوچھیں۔ TatvaX قدم بہ قدم سمجھائے گا۔",
     welcome_helpdesk: "داخلہ، فیس، امتحان، قواعد یا سہولیات کے بارے میں پوچھیں۔",

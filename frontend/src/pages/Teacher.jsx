@@ -1,6 +1,5 @@
 import {
-  BarChart3, CheckCircle2, Copy, Cpu, ExternalLink, Eye, EyeOff, FilePenLine, KeyRound, Lock, MessageSquareText, PenLine, Plus, Save,
-  Trash2, Users, XCircle,
+  BarChart3, Cpu, Eye, FilePenLine, Lock, MessageSquareText, PenLine, Plus, Save, Trash2, Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -9,6 +8,7 @@ import { BarList, ColumnChart } from "../components/Charts.jsx";
 import { useCrumbs, useShell } from "../components/Shell.jsx";
 import { Dialog, EmptyState, Loading, Markdown, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
+import AISettings from "./AISettings.jsx";
 import { api } from "../lib/api.js";
 import { formatNumber, shortDate, timeAgo } from "../lib/format.js";
 
@@ -181,7 +181,7 @@ function ContentEditor({ selected }) {
             <Link key={d.slug} to={`/teacher/content/${d.slug}`} className={d.slug === slug ? "active" : ""}>
               <span className="swatch" style={{ background: d.color }} />
               <span style={{ flex: 1 }}>{d.title}</span>
-              {d.kind === "helpdesk" && <span className="tag">Help desk</span>}
+              {d.kind === "helpdesk" && <span className="tag">TatvAI info</span>}
             </Link>
           ))}
           <Link to="/teacher/content/new" className={isNew ? "active" : ""}><Plus size={15} /> New subject</Link>
@@ -207,7 +207,7 @@ function ContentEditor({ selected }) {
               <div className="field"><label className="label" htmlFor="doc-kind">Type</label>
                 <select className="select" id="doc-kind" value={form.kind} onChange={update("kind")}>
                   <option value="subject">Subject notes</option>
-                  <option value="helpdesk">Help desk information</option>
+                  <option value="helpdesk">School information for TatvAI</option>
                 </select></div>
             )}
             <div className="field">
@@ -264,183 +264,6 @@ function Feedback() {
   );
 }
 
-function AISettings() {
-  const { reloadApp, notify } = useApp();
-  const [state, setState] = useState(null);
-  const [key, setKey] = useState("");
-  const [model, setModel] = useState("");
-  const [customModel, setCustomModel] = useState("");
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-  const [testResult, setTestResult] = useState(null);
-  const [revealed, setRevealed] = useState(null);
-
-  const reveal = async () => {
-    if (revealed) { setRevealed(null); return; }
-    try {
-      setRevealed((await api("/api/admin/ai/key")).api_key);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-  const copyKey = async () => {
-    const key = revealed || (await api("/api/admin/ai/key")).api_key;
-    await navigator.clipboard.writeText(key);
-    notify("API key copied");
-  };
-
-  const apply = useCallback((data) => {
-    setState(data);
-    const known = data.models.some((m) => m.id === data.ai.model);
-    setModel(known ? data.ai.model : "custom");
-    setCustomModel(known ? "" : data.ai.model);
-  }, []);
-
-  useEffect(() => {
-    api("/api/admin/ai").then(apply).catch((err) => setError(err.message));
-  }, [apply]);
-
-  const test = async () => {
-    setError("");
-    setBusy("test");
-    try {
-      const result = await api("/api/admin/ai/test", { method: "POST", body: {} });
-      setTestResult({ ok: true, text: `Connected in ${(result.latency_ms / 1000).toFixed(1)} s. The model replied: “${result.reply}”` });
-      setState((current) => ({ ...current, ai: result.ai }));
-      await reloadApp();
-    } catch (err) {
-      setTestResult({ ok: false, text: err.message });
-      api("/api/admin/ai").then(apply).catch(() => {});
-      reloadApp().catch(() => {});
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const save = async (body, message) => {
-    setError("");
-    setTestResult(null);
-    setBusy("save");
-    try {
-      const data = await api("/api/admin/ai", { method: "PUT", body });
-      apply(data);
-      setKey("");
-      setRevealed(null);
-      await reloadApp();
-      notify(message, { kind: "success" });
-      return data;
-    } catch (err) {
-      setError(err.message);
-      return null;
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const submit = async (event) => {
-    event.preventDefault();
-    const body = { model: model === "custom" ? customModel.trim() : model };
-    const newKey = key.trim();
-    if (newKey) body.api_key = newKey;
-    const saved = await save(body, newKey ? "NVIDIA API key saved" : "AI settings saved");
-    if (saved?.ai.configured && newKey) test(); // check a new key straight away
-  };
-
-  if (error && !state) return <p className="form-error">{error}</p>;
-  if (!state) return <Loading />;
-  const { ai, models } = state;
-  const [statusKind, statusLabel] = !ai.allowed ? ["negative", "Turned off on the server"]
-    : !ai.configured ? ["", "Not configured"]
-    : ai.available ? ["positive", "Active"]
-    : ["negative", "Key rejected"];
-  const selected = models.find((m) => m.id === model);
-
-  return (
-    <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", alignItems: "start" }}>
-      <Panel title="NVIDIA AI tutor" actions={<span className={`tag ${statusKind}`}>{statusLabel}</span>}>
-        {ai.configured && (
-          <div className="key-card" style={ai.available ? undefined : { background: "var(--negative-tint)", borderColor: "var(--negative)" }}>
-            <span className="key-icon" style={ai.available ? undefined : { background: "var(--negative)" }}><KeyRound size={17} /></span>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div className="kc-meta">{ai.source === "environment" ? "Key from the server's NVIDIA_API_KEY setting" : "Saved key"}
-                {ai.saved_at && ai.source === "settings" ? ` · saved ${timeAgo(ai.saved_at)}` : ""}</div>
-              <code>{revealed || `${ai.key_hint?.split("…")[0] ?? ""}${"•".repeat(24)}${ai.key_hint?.split("…")[1] ?? ""}`}</code>
-            </div>
-            <button className="icon-btn" type="button" onClick={reveal} aria-label={revealed ? "Hide key" : "Show key"} title={revealed ? "Hide key" : "Show key"}>
-              {revealed ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-            <button className="icon-btn" type="button" onClick={() => copyKey().catch((err) => setError(err.message))} aria-label="Copy key" title="Copy key">
-              <Copy size={16} />
-            </button>
-          </div>
-        )}
-        <form onSubmit={submit} noValidate>
-          <div className="field">
-            <label className="label" htmlFor="nv-key">{ai.configured ? "Replace the key" : "NVIDIA API key"}</label>
-            <input className="input mono" id="nv-key" type="password" autoComplete="off" spellCheck={false}
-              placeholder={ai.key_hint ? `Saved: ${ai.key_hint} (enter a new key to replace it)` : "nvapi-..."}
-              value={key} onChange={(e) => setKey(e.target.value)} />
-            <span className="hint">
-              {ai.source === "environment"
-                ? "Currently using the key from the server's NVIDIA_API_KEY setting. A key saved here takes priority."
-                : "Stored only on this server. It is never shown again or sent to students' browsers."}
-            </span>
-          </div>
-          <div className="field">
-            <label className="label" htmlFor="nv-model">Model</label>
-            <select className="select" id="nv-model" value={model} onChange={(e) => setModel(e.target.value)}>
-              {models.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.id})</option>)}
-              <option value="custom">Another model from build.nvidia.com…</option>
-            </select>
-            {selected && <span className="hint">{selected.note}</span>}
-            {model === "custom" && (
-              <input className="input mono" style={{ marginTop: 8 }} aria-label="Model ID" placeholder="publisher/model-name"
-                value={customModel} onChange={(e) => setCustomModel(e.target.value)} />
-            )}
-          </div>
-          {ai.last_error && !testResult && <p className="form-error">{ai.last_error}</p>}
-          {error && <p className="form-error" role="alert">{error}</p>}
-          {testResult && (
-            <p className="small" role="status"
-              style={{ display: "flex", gap: 8, alignItems: "flex-start", color: testResult.ok ? "var(--positive)" : "var(--negative)" }}>
-              {testResult.ok ? <CheckCircle2 size={16} /> : <XCircle size={16} />} <span>{testResult.text}</span>
-            </p>
-          )}
-          <div className="dialog-footer" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
-            {ai.source === "settings"
-              ? <button className="btn btn-danger" type="button" disabled={Boolean(busy)}
-                  onClick={() => save({ api_key: "" }, "NVIDIA API key removed")}><Trash2 size={15} /> Remove key</button>
-              : <span />}
-            <span style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-secondary" type="button" onClick={test} disabled={!ai.configured || Boolean(busy)}>
-                {busy === "test" ? <span className="spinner" aria-hidden="true" /> : <CheckCircle2 size={15} />} Test connection
-              </button>
-              <button className="btn" type="submit" disabled={Boolean(busy)}><Save size={15} /> Save</button>
-            </span>
-          </div>
-        </form>
-      </Panel>
-
-      <Panel title="Get a free NVIDIA API key">
-        <ol className="prose small" style={{ paddingLeft: "1.2em", marginTop: 0 }}>
-          <li>Go to <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer">build.nvidia.com <ExternalLink size={12} /></a> and
-            sign in, or create a free NVIDIA account.</li>
-          <li>Open your profile menu, choose <strong>API Keys</strong>, then <strong>Generate API Key</strong>.</li>
-          <li>Copy the key (it starts with <code>nvapi-</code>), paste it here and select <strong>Save</strong>.</li>
-        </ol>
-        <p className="small muted" style={{ marginBottom: 8 }}>
-          <KeyRound size={13} style={{ verticalAlign: "-2px" }} /> NVIDIA's free developer tier is meant for prototyping and limits
-          how many requests you can make (about 40 a minute). When the limit is reached, students automatically get answers from
-          the study notes until it resets, so nothing breaks.
-        </p>
-        <p className="small muted" style={{ margin: 0 }}>
-          Without a key, TatvaX still works in notes mode: answers, assessments and translation all run without AI.
-        </p>
-      </Panel>
-    </div>
-  );
-}
-
 export default function TeacherConsole() {
   const { t, user, app } = useApp();
   const { openAccount } = useShell();
@@ -464,8 +287,8 @@ export default function TeacherConsole() {
     <>
       <PageHeader eyebrow={t("group_admin")} title={t("teacher_title")}
         lede={app.ai_enabled
-          ? `AI tutor: ${app.ai_model} on NVIDIA`
-          : <>The AI tutor is off, so students receive answers from the study notes. <Link to="/teacher/ai">Add a free NVIDIA API key</Link> to turn it on.</>} />
+          ? `AI tutor: ${app.ai_model} via ${app.ai_provider}`
+          : <>The AI tutor is off, so students receive answers from the study notes. <Link to="/teacher/ai">Connect an AI provider</Link> (NVIDIA, Gemini and Groq have free tiers) to turn it on.</>} />
       <nav className="tabs" aria-label={t("teacher_title")}>
         {TABS.map(([name, Icon, label]) => (
           <Link key={name} to={`/teacher/${name}`} className={name === tab ? "active" : ""} aria-current={name === tab ? "page" : undefined}>
