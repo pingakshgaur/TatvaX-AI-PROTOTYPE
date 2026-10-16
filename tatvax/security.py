@@ -1,5 +1,6 @@
 """Request guards: JSON-only writes (a CSRF defence), rate limiting, and role checks."""
 
+import sqlite3
 import threading
 import time
 from collections import defaultdict, deque
@@ -13,13 +14,35 @@ def error(message: str, status: int = 400, **extra):
 
 
 class RateLimiter:
-    """In-memory sliding window. Good enough for a single-process deployment."""
+    """Sliding-window rate limits. In memory by default, which suits one server process. With
+    TATVAX_SHARED_RATE_LIMIT=1 the counts live in the database instead, so several worker processes
+    (for example gunicorn -w 4) share the same limits."""
 
     def __init__(self):
         self._hits: dict[str, deque] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._database: str | None = None
+        self._local = threading.local()
+
+    def configure(self, database: str | None) -> None:
+        self._database = database
+        if database:
+            conn = self._conn()
+            conn.execute("CREATE TABLE IF NOT EXISTS rate_hits (key TEXT NOT NULL, at REAL NOT NULL)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_rate_hits ON rate_hits(key, at)")
+            conn.commit()
+
+    def _conn(self):
+        conn = getattr(self._local, "conn", None)
+        if conn is None or getattr(self._local, "path", None) != self._database:
+            conn = sqlite3.connect(self._database, timeout=15, check_same_thread=False, isolation_level=None)
+            conn.execute("PRAGMA journal_mode = WAL")
+            self._local.conn, self._local.path = conn, self._database
+        return conn
 
     def allow(self, key: str, limit: int, window: float = 60.0) -> bool:
+        if self._database:
+            return self._allow_shared(key, limit, window)
         now = time.monotonic()
         with self._lock:
             hits = self._hits[key]
@@ -30,9 +53,28 @@ class RateLimiter:
             hits.append(now)
             return True
 
+    def _allow_shared(self, key: str, limit: int, window: float) -> bool:
+        now = time.time()
+        conn = self._conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")  # one process at a time, so two can't both take the last slot
+            conn.execute("DELETE FROM rate_hits WHERE key = ? AND at < ?", (key, now - window))
+            count = conn.execute("SELECT COUNT(*) FROM rate_hits WHERE key = ?", (key,)).fetchone()[0]
+            allowed = count < limit
+            if allowed:
+                conn.execute("INSERT INTO rate_hits (key, at) VALUES (?, ?)", (key, now))
+            conn.commit()
+            return allowed
+        except sqlite3.Error:
+            conn.rollback()
+            return True  # never lock learners out because the limiter itself failed
+
     def reset(self) -> None:
         with self._lock:
             self._hits.clear()
+        if self._database:
+            self._conn().execute("DELETE FROM rate_hits")
+            self._conn().commit()
 
 
 limiter = RateLimiter()

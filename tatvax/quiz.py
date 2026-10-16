@@ -10,7 +10,7 @@ import random
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import gamification, knowledge, languages
+from . import gamification, knowledge, languages, review
 from .ai import AIService, AIUnavailable
 from .db import now_iso
 from .translation import TranslationError, Translator
@@ -136,8 +136,8 @@ class QuizMaster:
 
     # ------------------------------------------------------------------ public API
 
-    def create(self, conn, user, subjects: list[str], topic: str, count: int, difficulty: str,
-               language: str, mode: str = "practice") -> dict:
+    def generate(self, conn, subjects: list[str], topic: str, count: int, difficulty: str, language: str) -> dict:
+        """Write the questions for an assessment without saving it (used directly by teacher assignments)."""
         slugs = list(dict.fromkeys(s for s in subjects if isinstance(s, str)))[:8]
         docs = [knowledge.get_document(conn, s) for s in slugs]
         if not docs or any(d is None or d["kind"] != "subject" for d in docs):
@@ -147,9 +147,7 @@ class QuizMaster:
         count = max(MIN_QUESTIONS, min(MAX_QUESTIONS, count, ))
         if difficulty not in DIFFICULTIES:
             difficulty = "medium"
-        if mode not in MODES:
-            mode = "practice"
-        topic = topic.strip()[:80]
+        topic = (topic or "").strip()[:80]
 
         def build(args):
             doc, n, focus = args
@@ -182,16 +180,31 @@ class QuizMaster:
         notice = None
         if len(questions) < count:
             notice = (f"Only {len(questions)} questions are available offline for this selection. "
-                      "Add a free NVIDIA API key in the teacher console for unlimited AI-written questions.")
-        time_limit = SECONDS_PER_QUESTION[difficulty] * len(questions) if mode == "timed" else None
+                      "Connect an AI provider in the teacher console for unlimited AI-written questions.")
         engine = "ai" if engines == {"ai"} else ("mixed" if "ai" in engines else "library")
+        return {"docs": docs, "slugs": slugs, "topic": topic, "difficulty": difficulty,
+                "questions": questions, "engine": engine, "notice": notice}
+
+    def create(self, conn, user, subjects: list[str], topic: str, count: int, difficulty: str,
+               language: str, mode: str = "practice") -> dict:
+        made = self.generate(conn, subjects, topic, count, difficulty, language)
+        return self.save(conn, user, made, language, mode)
+
+    def save(self, conn, user, made: dict, language: str, mode: str, assignment_id: int | None = None) -> dict:
+        """Store generated questions as a new assessment for this learner and return it."""
+        if mode not in MODES:
+            mode = "practice"
+        docs, slugs, topic, difficulty = made["docs"], made["slugs"], made["topic"], made["difficulty"]
+        questions, engine, notice = made["questions"], made["engine"], made.get("notice")
+        time_limit = SECONDS_PER_QUESTION[difficulty] * len(questions) if mode == "timed" else None
 
         cur = conn.execute(
             """INSERT INTO quizzes (user_id, subject, subjects_json, topic, language, difficulty, questions_json,
-                                    answers_json, total, engine, mode, time_limit, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)""",
+                                    answers_json, total, engine, mode, time_limit, assignment_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?)""",
             (user["id"], slugs[0] if len(slugs) == 1 else "mixed", json.dumps(slugs), topic or None, language,
-             difficulty, json.dumps(questions, ensure_ascii=False), len(questions), engine, mode, time_limit, now_iso()),
+             difficulty, json.dumps(questions, ensure_ascii=False), len(questions), engine, mode, time_limit,
+             assignment_id, now_iso()),
         )
         conn.commit()
         return self._public(cur.lastrowid, docs, topic, difficulty, mode, time_limit, engine, questions, notice)
@@ -228,6 +241,7 @@ class QuizMaster:
             (json.dumps(answers), score, now_iso(), duration_s, quiz["id"]),
         )
         reward = gamification.record_quiz(conn, user["id"], score, len(questions), quiz["mode"] or "practice")
+        review.add_missed(conn, user["id"], questions, answers)
         xp_total = conn.execute("SELECT xp FROM users WHERE id = ?", (user["id"],)).fetchone()["xp"]
 
         breakdown: dict[str, dict] = {}

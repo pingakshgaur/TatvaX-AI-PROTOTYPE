@@ -8,11 +8,11 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
 
-from . import admin, api, db, knowledge, todos, users
+from . import admin, api, assignments, db, knowledge, reports, review, todos, users
 from .ai import AIService
 from .config import build_config
 from .quiz import QuizMaster
-from .security import require_json_for_writes
+from .security import limiter, require_json_for_writes
 from .translation import Translator
 from .tutor import Tutor
 
@@ -73,6 +73,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     db.init_db(app.config["DATABASE"])
+    limiter.configure(app.config["DATABASE"] if app.config.get("SHARED_RATE_LIMIT") else None)
     conn = db.connect(app.config["DATABASE"])
     try:
         imported = knowledge.seed_documents(conn, app.config["CONTENT_DIR"])
@@ -102,6 +103,10 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(api.bp)
     app.register_blueprint(admin.bp)
     app.register_blueprint(todos.bp)
+    app.register_blueprint(review.bp)
+    app.register_blueprint(assignments.student_bp)
+    app.register_blueprint(assignments.teacher_bp)
+    app.register_blueprint(reports.bp)
     app.before_request(require_json_for_writes)
     app.teardown_appcontext(db.close_db)
 

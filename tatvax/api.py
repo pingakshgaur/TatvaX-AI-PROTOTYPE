@@ -49,10 +49,23 @@ def bootstrap():
 
 # --------------------------------------------------------------------------- chat
 
+_IMAGE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$")
+MAX_IMAGE_CHARS = 1_500_000  # base64 characters, about 1.1 MB
+
+
 @bp.post("/chat")
 def chat():
     data = request.get_json(silent=True) or {}
     message = str(data.get("message", "")).strip()
+    image = None
+    if data.get("image"):
+        match = _IMAGE.match(str(data["image"]))
+        if not match:
+            return error("Photos must be JPEG, PNG or WebP images")
+        if len(match.group(2)) > MAX_IMAGE_CHARS:
+            return error("That photo is too large. Please try a smaller one.")
+        image = {"media_type": match.group(1), "data": match.group(2)}
+        message = message or "Please look at this picture and explain it step by step."
     if not message:
         return error("Please type a question")
     if len(message) > current_app.config["MAX_MESSAGE_CHARS"]:
@@ -69,7 +82,7 @@ def chat():
 
     # The answer keeps streaming after this view returns, so it gets its own connection.
     conn = connect(current_app.config["DATABASE"])
-    events = services().tutor.answer(conn, user, message, mode, data.get("subject"), language, conversation_id)
+    events = services().tutor.answer(conn, user, message, mode, data.get("subject"), language, conversation_id, image)
     try:
         first = next(events)  # validation errors surface here, before streaming starts
     except ValueError as exc:

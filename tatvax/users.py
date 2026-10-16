@@ -58,6 +58,9 @@ def _merge_guest_into(db, guest_id: int, user_id: int) -> None:
         return
     for table in ("conversations", "quizzes", "question_log", "xp_events", "todos"):
         db.execute(f"UPDATE {table} SET user_id = ? WHERE user_id = ?", (user_id, guest_id))
+    # Review cards are unique per question, so a card the account already has wins.
+    db.execute("UPDATE OR IGNORE review_cards SET user_id = ? WHERE user_id = ?", (user_id, guest_id))
+    db.execute("DELETE FROM review_cards WHERE user_id = ?", (guest_id,))
     db.execute(
         """INSERT INTO activity (user_id, day, questions, quizzes)
            SELECT ?, day, questions, quizzes FROM activity WHERE user_id = ?

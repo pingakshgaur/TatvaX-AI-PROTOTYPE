@@ -242,13 +242,14 @@
 /* ------------------------------------------------------------------ translator languages */
 
 .tr-head:has(.lang-grid) { display: block; overflow: visible; }
-.lang-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.lang-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; }
 .lang-grid .lang-chip { min-width: 0; padding: 6px 2px; font-size: clamp(11px, 0.95vw, 13px); letter-spacing: -0.01em; overflow: hidden; text-overflow: clip; text-align: center; border-radius: 9px; }
 .lang-grid .lang-chip.auto { font-weight: 600; color: var(--c-indigo); border-style: dashed; border-color: color-mix(in srgb, var(--c-indigo) 45%, var(--rule)); }
 .lang-grid .lang-chip.auto[aria-pressed="true"] { background: var(--c-indigo); border-color: var(--c-indigo); border-style: solid; color: #fff; }
 .tr-pane + .tr-swap + .tr-pane .lang-chip[aria-pressed="true"] { background: var(--c-indigo); border-color: var(--c-indigo); color: #fff; }
 
-@media (max-width: 900px) { .lang-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .lang-grid { grid-template-columns: repeat(9, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .lang-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .lang-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* ------------------------------------------------------------------ AI providers */

@@ -7,7 +7,7 @@ import re
 from flask import Blueprint, request
 
 from . import knowledge
-from .db import get_db, now_iso
+from .db import get_db, now_iso, today
 from .security import error
 from .users import current_user
 
@@ -62,6 +62,12 @@ def _clean(data: dict, conn, partial: bool) -> tuple[dict, str | None]:
         out["subtasks"] = json.dumps([{"text": str(s.get("text", "")).strip()[:200], "done": bool(s.get("done"))}
                                       for s in subtasks if isinstance(s, dict) and str(s.get("text", "")).strip()],
                                      ensure_ascii=False)
+    if "link" in data:
+        link = str(data["link"] or "").strip()[:300] or None
+        # Only pages inside TatvaX, never another site.
+        if link and (not link.startswith("/") or link.startswith("//") or "\\" in link):
+            return {}, "Links must point to a page in TatvaX"
+        out["link"] = link
     if "done" in data:
         out["done"] = 1 if data["done"] else 0
         out["completed_at"] = now_iso() if data["done"] else None
@@ -85,6 +91,26 @@ def list_todos():
         "SELECT * FROM todos WHERE user_id = ? ORDER BY done, position, id DESC", (user["id"],)
     ).fetchall()
     return {"todos": [_public(r) for r in rows]}
+
+
+@bp.get("/summary")
+def todo_summary():
+    """What needs attention: open tasks due today or already overdue (for reminders)."""
+    user = current_user()
+    if user is None:
+        return {"today": 0, "overdue": 0, "open": 0, "next": []}
+    db = get_db()
+    day = today()
+    rows = db.execute(
+        """SELECT * FROM todos WHERE user_id = ? AND done = 0 AND due_date IS NOT NULL AND due_date <= ?
+           ORDER BY due_date, position LIMIT 5""",
+        (user["id"], day),
+    ).fetchall()
+    counts = db.execute(
+        """SELECT COUNT(*), SUM(due_date = ?), SUM(due_date < ?) FROM todos WHERE user_id = ? AND done = 0""",
+        (day, day, user["id"]),
+    ).fetchone()
+    return {"open": counts[0], "today": counts[1] or 0, "overdue": counts[2] or 0, "next": [_public(r) for r in rows]}
 
 
 @bp.post("")
@@ -144,10 +170,11 @@ def duplicate_todo(todo_id: int):
     if row is None:
         return error("Task not found", 404)
     cur = db.execute(
-        """INSERT INTO todos (user_id, title, notes, priority, due_date, subject, tags, subtasks, position, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO todos (user_id, title, notes, priority, due_date, subject, tags, subtasks, link, position,
+                              created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (user["id"], f"{row['title']} (copy)"[:200], row["notes"], row["priority"], row["due_date"], row["subject"],
-         row["tags"], row["subtasks"], row["position"], now_iso(), now_iso()),
+         row["tags"], row["subtasks"], row["link"], row["position"], now_iso(), now_iso()),
     )
     db.commit()
     return {"todo": _public(_own(db, user, cur.lastrowid))}, 201

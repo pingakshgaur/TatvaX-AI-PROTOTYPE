@@ -1,4 +1,4 @@
-// Translator: type or paste text and see it in any of TatvaX's 13 languages as you type.
+// Translator: type or paste text and see it in any of TatvaX's 16 languages as you type.
 import { ArrowLeftRight, Copy, History, MessageSquareText, Mic, Trash2, Volume2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -110,7 +110,7 @@ export default function Translate() {
   return (
     <>
       <PageHeader eyebrow={t("group_practice")} title={t("nav_translate")}
-        lede="Translate study questions, answers and notes between 13 Indian languages. Results appear as you type." />
+        lede="Translate study questions, answers and notes between 16 Indian languages. Results appear as you type." />
 
       <div className="translator">
         <section className="tr-pane" aria-label="Text to translate">

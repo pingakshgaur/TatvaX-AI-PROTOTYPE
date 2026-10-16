@@ -115,6 +115,10 @@ class AIUnavailable(Exception):
         self.permanent = permanent
 
 
+class ImagesUnsupported(AIUnavailable):
+    """The model rejected a question that included a picture."""
+
+
 class _ThinkFilter:
     """Removes <think>...</think> reasoning that some models emit before their answer,
     including when the tags are split across streamed chunks."""
@@ -438,9 +442,43 @@ class AIService:
 
     # ------------------------------------------------------------------ public API
 
+    @staticmethod
+    def _with_images(kind: str, messages: list[dict]) -> list[dict]:
+        """Messages may carry {"image": {"media_type", "data"}} (base64); put it in each API's format."""
+        out = []
+        for message in messages:
+            image = message.get("image")
+            if not image:
+                out.append({"role": message["role"], "content": message["content"]})
+                continue
+            if kind == "anthropic":
+                parts = [{"type": "image", "source": {"type": "base64", "media_type": image["media_type"], "data": image["data"]}},
+                         {"type": "text", "text": message["content"]}]
+            else:
+                parts = [{"type": "text", "text": message["content"]},
+                         {"type": "image_url", "image_url": {"url": f"data:{image['media_type']};base64,{image['data']}"}}]
+            out.append({"role": message["role"], "content": parts})
+        return out
+
     def stream_reply(self, system: str, messages: list[dict], max_tokens: int = 1500) -> Iterator[tuple[str, str]]:
         """Yield ("text", chunk) events and finally ("stop", reason)."""
         state = self._check(self.active)
+        has_image = any(m.get("image") for m in messages)
+        messages = self._with_images(state.provider.kind, messages)
+        if has_image:
+            try:
+                yield from self._stream(state, system, messages, max_tokens)
+            except AIUnavailable as exc:
+                if exc.permanent or "rate limit" in str(exc).lower():
+                    raise
+                raise ImagesUnsupported(
+                    f"The current AI model ({state.model or state.provider.default_model}) can't read pictures. "
+                    "Type the question instead, or ask your teacher to choose a model that understands images."
+                ) from exc
+            return
+        yield from self._stream(state, system, messages, max_tokens)
+
+    def _stream(self, state: ProviderState, system: str, messages: list[dict], max_tokens: int) -> Iterator[tuple[str, str]]:
         if state.provider.kind == "anthropic":
             yield from self._anthropic_stream(state, system, messages, max_tokens)
             return

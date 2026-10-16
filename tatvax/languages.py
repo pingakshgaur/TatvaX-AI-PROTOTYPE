@@ -15,6 +15,9 @@ LANGUAGES = {
     "or": ("Odia", "ଓଡ଼ିଆ", "or-IN", "ltr"),
     "as": ("Assamese", "অসমীয়া", "as-IN", "ltr"),
     "ur": ("Urdu", "اردو", "ur-IN", "rtl"),
+    "ne": ("Nepali", "नेपाली", "ne-NP", "ltr"),
+    "sa": ("Sanskrit", "संस्कृतम्", "sa-IN", "ltr"),
+    "gom": ("Konkani", "कोंकणी", "kok-IN", "ltr"),
 }
 
 DEFAULT_LANGUAGE = "en"
@@ -34,6 +37,7 @@ _SCRIPTS = [
 ]
 
 _MARATHI_WORDS = ("आहे", "आहेत", "नाही", "काय", "कसे", "मला", "तुम्ही", "आणि", "मध्ये")
+_NEPALI_WORDS = ("छ", "हुन्छ", "गर्नु", "तपाईं", "हुँदै", "भएको", "गर्छ")
 _ASSAMESE_LETTERS = ("ৰ", "ৱ")  # ৰ ৱ only occur in Assamese
 
 
@@ -76,6 +80,8 @@ def detect_language(text: str) -> str:
         return DEFAULT_LANGUAGE
     if lang == "hi" and ("ळ" in text or any(word in text for word in _MARATHI_WORDS)):
         return "mr"
+    if lang == "hi" and any(word in text.split() for word in _NEPALI_WORDS):
+        return "ne"
     if lang == "bn" and any(letter in text for letter in _ASSAMESE_LETTERS):
         return "as"
     return lang

@@ -3,7 +3,7 @@ from conftest import ask, register
 
 def test_bootstrap_lists_languages_and_subjects(client):
     data = client.get("/api/bootstrap").get_json()
-    assert len(data["app"]["languages"]) == 13
+    assert len(data["app"]["languages"]) == 16
     assert {s["slug"] for s in data["app"]["subjects"]} == {"mathematics", "science", "english", "social-studies"}
     assert data["app"]["helpdesk"]["slug"] == "school-faq"
     assert data["app"]["ai_enabled"] is False

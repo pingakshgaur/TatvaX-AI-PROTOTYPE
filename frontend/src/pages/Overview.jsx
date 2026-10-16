@@ -138,7 +138,7 @@ export default function Overview() {
             ["/tatvai", Sparkles, t("card_helpdesk"), t("card_helpdesk_desc"), "var(--c-plum)"],
             ["/assessments", ClipboardCheck, t("card_quiz"), t("card_quiz_desc"), "var(--c-coral)"],
             ["/notes", BookOpen, t("card_library"), t("card_library_desc"), "var(--c-saffron)"],
-            ["/translate", Languages, t("nav_translate"), "Translate between 13 Indian languages as you type.", "var(--c-leaf)"],
+            ["/translate", Languages, t("nav_translate"), "Translate between 16 Indian languages as you type.", "var(--c-leaf)"],
           ].map(([to, Icon, title, desc, tone], i) => (
             <Link key={to} to={to} className="quick-card lift" style={{ "--tone": tone, "--i": i }}>
               <span className="qc-icon"><Icon size={18} /></span>

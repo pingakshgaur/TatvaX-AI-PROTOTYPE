@@ -127,6 +127,51 @@ CREATE TABLE IF NOT EXISTS todos (
 );
 CREATE INDEX IF NOT EXISTS idx_todos_user ON todos(user_id, done, position);
 
+-- Spaced repetition: questions a learner got wrong come back on a widening schedule (Leitner boxes).
+CREATE TABLE IF NOT EXISTS review_cards (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    fingerprint TEXT NOT NULL,                   -- normalised question text, so a question is kept once
+    subject TEXT,
+    card_json TEXT NOT NULL,                     -- question, options, answer_index, explanation, subject_title
+    box INTEGER NOT NULL DEFAULT 0,              -- 0 = just missed ... 5 = mastered
+    due TEXT NOT NULL,                           -- YYYY-MM-DD
+    reviews INTEGER NOT NULL DEFAULT 0,
+    lapses INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    reviewed_at TEXT,
+    UNIQUE (user_id, fingerprint)
+);
+CREATE INDEX IF NOT EXISTS idx_review_due ON review_cards(user_id, due);
+
+-- Work a teacher sets for a class: an assessment (questions written once, the same for everyone)
+-- or reading from the study notes.
+CREATE TABLE IF NOT EXISTS assignments (
+    id INTEGER PRIMARY KEY,
+    teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    instructions TEXT,
+    kind TEXT NOT NULL,                          -- quiz | reading
+    subjects_json TEXT NOT NULL,
+    topic TEXT,
+    grade INTEGER,                               -- class 1-12, or NULL for every class
+    mode TEXT NOT NULL DEFAULT 'practice',
+    difficulty TEXT NOT NULL DEFAULT 'medium',
+    language TEXT NOT NULL DEFAULT 'en',
+    questions_json TEXT,
+    engine TEXT,
+    due_date TEXT,
+    archived INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS assignment_done (
+    assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    completed_at TEXT NOT NULL,
+    PRIMARY KEY (assignment_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -191,6 +236,8 @@ MIGRATIONS = [
     ("quizzes", "mode", "TEXT NOT NULL DEFAULT 'practice'"),     # practice | exam | timed
     ("quizzes", "time_limit", "INTEGER"),                        # seconds, timed mode
     ("quizzes", "duration_s", "INTEGER"),                        # seconds taken
+    ("quizzes", "assignment_id", "INTEGER"),                     # set when taken for a teacher's assignment
+    ("todos", "link", "TEXT"),                                   # an in-app page the task points to
 ]
 
 

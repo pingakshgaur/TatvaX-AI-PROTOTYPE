@@ -43,6 +43,7 @@ def build_config(overrides: dict | None = None) -> dict:
         # The AI tutor uses a free NVIDIA API key, entered in the teacher console or set here.
         # TATVAX_AI=off disables it entirely (study-notes answers only).
         "AI_ALLOWED": _env_bool("TATVAX_AI", True),
+        "SHARED_RATE_LIMIT": bool(_env_bool("TATVAX_SHARED_RATE_LIMIT", False)),
         "NVIDIA_API_KEY": os.environ.get("NVIDIA_API_KEY", ""),
         "AI_MODEL": os.environ.get("TATVAX_MODEL", ""),
         "TEACHER_CODE": os.environ.get("TATVAX_TEACHER_CODE", ""),

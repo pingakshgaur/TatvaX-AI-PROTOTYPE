@@ -2,7 +2,7 @@
 
 **A multilingual AI tutor, assessment platform and AI school companion for Indian students.**
 
-Students ask questions by typing or speaking in any of 13 Indian languages, get step-by-step explanations grounded in their school's own study notes, practise with assessments, and track their progress. Teachers get class analytics and edit the notes the tutor teaches from.
+Students ask questions by typing or speaking in any of 16 Indian languages, get step-by-step explanations grounded in their school's own study notes, practise with assessments, and track their progress. Teachers get class analytics and edit the notes the tutor teaches from.
 
 [Watch the v1 prototype in action](https://youtu.be/hqo_TAZh0ls)
 
@@ -19,7 +19,7 @@ Students ask questions by typing or speaking in any of 13 Indian languages, get 
 - **Prompt tools**: copy, edit (the conversation continues from the edited question) or re-ask any question, plus copy and clear in the message box.
 - **Assessment history**: review any past assessment, retake it with the questions reshuffled, or delete it.
 - **PDF exports**: study notes for any subject, and assessment reports with the score, a per-subject breakdown, and every question with the correct answer and explanation.
-- **Translator**: all 13 languages are listed on both sides; no more "More" menu.
+- **Translator**: all 16 languages are listed on both sides; no more "More" menu.
 - **A simpler profile menu**, with language, daily goal, theme and sound moved into **Settings**.
 
 ## What's new in version 2
@@ -56,7 +56,7 @@ From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentica
 - **TatvAI**: an AI companion for admissions, fees, exams, rules and general study help. School facts come only from the school's information, so it never invents fees, dates or phone numbers.
 - **Assessments**: pick several subjects at once, 3–30 questions, easy/medium/hard/mixed difficulty, and three modes: practice (instant feedback), exam (question navigator and flags, marked at the end) and timed. Results show a per-subject breakdown, and one click retries just the mistakes or sends them to the tutor to explain. Every assessment is saved to a history where it can be reviewed, retaken or exported as a PDF report.
 - **Study notes**: colour-coded chapter and topic cards with example/remember/formula callouts, reading progress, "mark as read", a quiz per chapter, search and PDF export. Available offline once opened.
-- **Translator**: translate as you type between 13 languages (all listed on both sides), with language detection, voice input, read-aloud and history (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Any answer can also be translated in place.
+- **Translator**: translate as you type between 16 languages (all listed on both sides), with language detection, voice input, read-aloud and history (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Any answer can also be translated in place.
 - **Voice**: ask by speaking (with a live microphone level), and listen to any answer.
 - **Rewards**: XP and levels, daily streaks, an adjustable daily goal, 13 achievements in four rarities with full-screen celebrations, and a weekly leaderboard (opt-out available).
 - **To-do list**: plan homework and revision with priorities, due dates, subjects, tags and steps.
@@ -157,7 +157,7 @@ TatvaX/
 │   ├── gamification.py     # XP, levels, streaks, achievements, leaderboard
 │   ├── translation.py      # AI, then Google and MyMemory fallbacks
 │   ├── speech.py           # in-memory text-to-speech
-│   ├── languages.py        # 13 languages + script detection
+│   ├── languages.py        # 16 languages + script detection
 │   ├── users.py            # accounts and settings
 │   ├── api.py              # student API
 │   ├── admin.py            # teacher API

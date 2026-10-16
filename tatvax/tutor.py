@@ -7,7 +7,7 @@ import re
 from collections.abc import Iterator
 
 from . import followups, gamification, knowledge, languages
-from .ai import AIService, AIUnavailable
+from .ai import AIService, AIUnavailable, ImagesUnsupported
 from .db import now_iso
 from .knowledge import library_index
 from .translation import TranslationError, Translator
@@ -52,6 +52,9 @@ NOT_FOUND = {
         "Please contact the school office for the exact details."
     ),
 }
+
+
+PHOTO_MARK = "[Photo] "  # prefix of a saved question that came with a picture
 
 
 class Tutor:
@@ -185,7 +188,7 @@ class Tutor:
     # ------------------------------------------------------------------ main entry
 
     def answer(self, conn, user, question: str, mode: str, subject: str | None,
-               language: str, conversation_id: int | None) -> Iterator[dict]:
+               language: str, conversation_id: int | None, image: dict | None = None) -> Iterator[dict]:
         if conversation_id:
             convo = conn.execute(
                 "SELECT * FROM conversations WHERE id = ? AND user_id = ?", (conversation_id, user["id"])
@@ -221,7 +224,8 @@ class Tutor:
             try:
                 chunks = []
                 splitter = followups.FollowupSplitter()
-                for kind, value in self.ai.stream_reply(system, history + [{"role": "user", "content": api_question}]):
+                asking = {"role": "user", "content": api_question, **({"image": image} if image else {})}
+                for kind, value in self.ai.stream_reply(system, history + [asking]):
                     if kind == "text":
                         visible = splitter.feed(value)
                         if visible:
@@ -235,9 +239,16 @@ class Tutor:
                 text = re.sub(r"\n\s*(?:-{3,}|\*{3,})\s*$", "", "".join(chunks).strip()).strip()
                 engine = "ai"
                 suggestions = followups.parse(block, asked)
+            except ImagesUnsupported as exc:
+                text = str(exc)
+                yield {"type": "replace", "text": text}
             except AIUnavailable as exc:
                 log.warning("Falling back to library answer: %s", exc)
                 text = ""
+        if not text.strip() and image:
+            text = ("Questions with a picture need the AI tutor, which isn't available right now. "
+                    "Please type the question instead and I'll answer from the study notes.")
+            yield {"type": "replace", "text": text}
         if not text.strip():
             text, sources = self.library_answer(conn, question, mode, docs, language)
             if ai_attempted:
@@ -248,7 +259,10 @@ class Tutor:
 
         asked_row = conn.execute(
             "INSERT INTO messages (conversation_id, role, content, api_content, language, created_at) VALUES (?, 'user', ?, ?, ?, ?)",
-            (conversation_id, question, api_question if engine == "ai" else None, language, now_iso()),
+            # The photo itself isn't kept; the saved question notes that one was attached.
+            (conversation_id, f"{PHOTO_MARK}{question}" if image else question,
+             (api_question + "\n\n(The student attached a photo with this question.)" if image else api_question)
+             if engine == "ai" else None, language, now_iso()),
         )
         cur = conn.execute(
             """INSERT INTO messages (conversation_id, role, content, language, engine, suggestions, created_at)
