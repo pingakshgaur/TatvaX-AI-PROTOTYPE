@@ -138,7 +138,7 @@ export default function ProfileMenu({ onAccount }) {
 
           <section className="pm-todos" aria-label="To-do list">
             <div className="pm-todos-head">
-              <span className="eyebrow"><ListChecks size={13} /> To-do</span>
+              <span className="eyebrow"><ListChecks size={13} /> {t("nav_todos")}</span>
               <span className="small muted">{todos ? `${openCount} open` : ""}</span>
             </div>
             {todos === null ? <span className="spinner" aria-label="Loading" /> : (
@@ -166,7 +166,7 @@ export default function ProfileMenu({ onAccount }) {
               <button type="submit" className="icon-btn" aria-label="Add task" disabled={!quick.trim()}><Plus size={15} /></button>
             </form>
             <Link to="/todos" className="pm-open" role="menuitem" onClick={close}>
-              Open to-do list{todos && todos.length ? ` (${todos.length})` : ""} <ArrowRight size={14} />
+              {t("open_todos")}{todos && todos.length ? ` (${todos.length})` : ""} <ArrowRight size={14} />
             </Link>
           </section>
 
@@ -183,17 +183,17 @@ export default function ProfileMenu({ onAccount }) {
               </>
             )}
             <button type="button" className="menu-item" role="menuitem" onClick={() => { close(); onAccount("settings"); }}>
-              <span className="mi-icon" style={{ background: "var(--c-plum)" }}><Settings size={16} /></span> Settings
+              <span className="mi-icon" style={{ background: "var(--c-plum)" }}><Settings size={16} /></span> {t("settings")}
               <span className="mi-meta">Language, theme, goal</span>
             </button>
             <Link to="/progress" className="menu-item" role="menuitem">
-              <span className="mi-icon" style={{ background: "var(--c-saffron)" }}><BarChart3 size={16} /></span> My progress
+              <span className="mi-icon" style={{ background: "var(--c-saffron)" }}><BarChart3 size={16} /></span> {t("my_progress")}
               <span className="mi-meta">Badges, leaderboard</span>
             </Link>
             {registered && (
               <>
                 <div className="menu-sep" />
-                <button type="button" className="menu-item danger" role="menuitem" onClick={signOut}><LogOut size={16} /> Sign out</button>
+                <button type="button" className="menu-item danger" role="menuitem" onClick={signOut}><LogOut size={16} /> {t("sign_out")}</button>
               </>
             )}
           </div>

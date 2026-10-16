@@ -1,6 +1,8 @@
 // Interface strings. English is complete; other languages translate the most visible
 // strings and fall back to English for the rest. Native-speaker review is welcome.
 
+import { EXTRA_STRINGS } from "./i18n-extra.js";
+
 const STRINGS = {
   en: {
     group_learn: "Learn", group_practice: "Practice", group_account: "You", group_admin: "Administration",
@@ -250,6 +252,8 @@ const STRINGS = {
     your_score: "آپ کا اسکور", level: "درجہ", progress_title: "پیش رفت", sign_in: "سائن ان", settings: "ترتیبات", language: "زبان",
   },
 };
+
+for (const [code, strings] of Object.entries(EXTRA_STRINGS)) STRINGS[code] = { ...STRINGS[code], ...strings };
 
 export function translate(lang, key, vars = {}) {
   const template = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;

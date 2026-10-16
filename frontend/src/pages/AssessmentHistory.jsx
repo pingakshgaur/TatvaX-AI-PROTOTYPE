@@ -1,15 +1,17 @@
 import { ArrowLeft, Clock, Eye, FileDown, Play, Plus, Search, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useCrumbs } from "../components/Shell.jsx";
 import SubjectArt from "../components/SubjectArt.jsx";
-import { CountUp, Dialog, EmptyState, Loading, PageHeader } from "../components/ui.jsx";
+import { CountUp, EmptyState, Loading, PageHeader } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import useUndoableDelete from "../lib/useUndoableDelete.js";
 import { timeAgo } from "../lib/format.js";
 import { formatTime, Results } from "./Assessments.jsx";
 
+const quizPath = (id) => `/api/quiz/${id}`;
 const FILTERS = [["all", "All"], ["finished", "Finished"], ["unfinished", "Not finished"]];
 
 function title(quiz) {
@@ -38,13 +40,24 @@ function useRetake() {
 }
 
 export function AssessmentHistory() {
-  const { t, app, user, notify } = useApp();
+  const { t, app, user } = useApp();
   const [quizzes, setQuizzes] = useState(null);
   const [filter, setFilter] = useState("all");
   const [subject, setSubject] = useState("all");
   const [query, setQuery] = useState("");
-  const [pendingDelete, setPendingDelete] = useState(null);
   const retake = useRetake();
+  const positions = useRef(new Map());
+  const hideQuiz = useCallback((quiz) => setQuizzes((list) => {
+    positions.current.set(quiz.id, list.findIndex((q) => q.id === quiz.id));
+    return list.filter((q) => q.id !== quiz.id);
+  }), []);
+  const restoreQuiz = useCallback((quiz) => setQuizzes((list) => {
+    if (list.some((q) => q.id === quiz.id)) return list;
+    const next = [...list];
+    next.splice(Math.min(positions.current.get(quiz.id) ?? 0, next.length), 0, quiz);
+    return next;
+  }), []);
+  const removeQuiz = useUndoableDelete({ hide: hideQuiz, restore: restoreQuiz, path: quizPath });
   useCrumbs([{ label: t("nav_quiz"), to: "/assessments" }, { label: "History" }]);
 
   useEffect(() => {
@@ -63,21 +76,9 @@ export function AssessmentHistory() {
   const best = finished.length ? Math.max(...finished.map((q) => Math.round((100 * q.score) / q.total))) : 0;
   const questions = finished.reduce((n, q) => n + q.total, 0);
 
-  const remove = async () => {
-    const quiz = pendingDelete;
-    setPendingDelete(null);
-    try {
-      await api(`/api/quiz/${quiz.id}`, { method: "DELETE" });
-      setQuizzes((list) => list.filter((q) => q.id !== quiz.id));
-      notify("Assessment removed from your history");
-    } catch (err) {
-      notify(err.message, { kind: "error" });
-    }
-  };
-
   return (
     <>
-      <PageHeader eyebrow={t("nav_quiz")} title="My assessments"
+      <PageHeader eyebrow={t("nav_quiz")} title={t("my_assessments")}
         lede="Every assessment you have taken. Review your answers, retake a test or export it as a PDF report."
         actions={<Link className="btn" to="/assessments"><Plus size={15} /> New assessment</Link>} />
 
@@ -143,12 +144,12 @@ export function AssessmentHistory() {
                   <div className="hc-score pending"><b>{q.answered}/{q.total}</b><span>answered</span></div>
                 )}
                 <div className="hc-actions">
-                  {q.completed_at && <Link className="btn btn-sm btn-secondary" to={`/assessments/review/${q.id}`}><Eye size={14} /> Review</Link>}
-                  <button className="btn btn-sm" type="button" onClick={() => retake(q.id)}><Play size={14} /> Retake</button>
+                  {q.completed_at && <Link className="btn btn-sm btn-secondary" to={`/assessments/review/${q.id}`}><Eye size={14} /> {t("review_btn")}</Link>}
+                  <button className="btn btn-sm" type="button" onClick={() => retake(q.id)}><Play size={14} /> {t("retake")}</button>
                   <a className="icon-btn bordered" href={`/print/assessment/${q.id}`} target="_blank" rel="noopener"
                     title="Export PDF" aria-label={`Export ${title(q)} as PDF`}><FileDown size={15} /></a>
                   <button className="icon-btn bordered" type="button" title="Delete" aria-label={`Delete ${title(q)}`}
-                    onClick={() => setPendingDelete(q)}><Trash2 size={15} /></button>
+                    onClick={() => removeQuiz(q, "Assessment deleted")}><Trash2 size={15} /></button>
                 </div>
               </article>
             );
@@ -156,13 +157,6 @@ export function AssessmentHistory() {
         </div>
       )}
 
-      <Dialog open={Boolean(pendingDelete)} onClose={() => setPendingDelete(null)} title="Delete assessment">
-        <p>Remove “{pendingDelete && title(pendingDelete)}” from your history? Your XP and badges stay.</p>
-        <div className="dialog-footer">
-          <button className="btn btn-secondary" type="button" onClick={() => setPendingDelete(null)}>{t("cancel")}</button>
-          <button className="btn btn-danger" type="button" onClick={remove}><Trash2 size={15} /> {t("delete")}</button>
-        </div>
-      </Dialog>
     </>
   );
 }

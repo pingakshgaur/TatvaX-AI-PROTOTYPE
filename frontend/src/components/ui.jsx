@@ -1,17 +1,24 @@
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { useApp } from "../context/AppContext.jsx";
-import { renderInline, renderMarkdown } from "../lib/markdown.js";
+
+// The Markdown and maths renderer is a large download, so it loads the first time it is needed;
+// until then the text is shown as it is.
+const loadView = () => import("./MarkdownView.jsx");
+const MarkdownBlock = lazy(() => loadView().then((m) => ({ default: m.MarkdownBlock })));
+const MarkdownInline = lazy(() => loadView().then((m) => ({ default: m.MarkdownInline })));
 
 export function Markdown({ source, className = "prose", ...rest }) {
-  const html = useMemo(() => renderMarkdown(source), [source]);
-  return <div className={className} dir="auto" dangerouslySetInnerHTML={{ __html: html }} {...rest} />;
+  return (
+    <Suspense fallback={<div className={className} dir="auto" style={{ whiteSpace: "pre-wrap" }} {...rest}>{source}</div>}>
+      <MarkdownBlock source={source} className={className} {...rest} />
+    </Suspense>
+  );
 }
 
 export function InlineMarkdown({ source }) {
-  const html = useMemo(() => renderInline(source), [source]);
-  return <span dir="auto" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <Suspense fallback={<span dir="auto">{source}</span>}><MarkdownInline source={source} /></Suspense>;
 }
 
 export function Loading({ label = "Loading" }) {
@@ -94,15 +101,20 @@ export function Dialog({ open, onClose, title, wide = false, children }) {
 }
 
 export function Toasts() {
-  const { toasts } = useApp();
+  const { toasts, dismissToast } = useApp();
   return (
     <div className="toasts" aria-live="polite">
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast ${toast.kind}`}>
-          <div>
+          <div style={{ flex: 1 }}>
             <span className="toast-title">{toast.title}</span>
             {toast.detail && <span className="toast-detail">{toast.detail}</span>}
           </div>
+          {toast.action && (
+            <button type="button" className="toast-action" onClick={() => { dismissToast(toast.id); toast.action.onClick(); }}>
+              {toast.action.label}
+            </button>
+          )}
         </div>
       ))}
     </div>

@@ -55,7 +55,7 @@ function Builder({ initialSubjects, initialTopic, onStart }) {
   return (
     <>
       <PageHeader eyebrow={t("group_practice")} title={t("quiz_title")} lede={t("quiz_sub")}
-        actions={<Link className="btn btn-secondary" to="/assessments/history"><History size={15} /> My assessments</Link>} />
+        actions={<Link className="btn btn-secondary" to="/assessments/history"><History size={15} /> {t("my_assessments")}</Link>} />
       <div className="builder">
         <div>
           <section className="builder-step">
@@ -412,7 +412,7 @@ export function Results({ quiz, outcome, onRestart, onRetry, review: reviewing =
               {wrong.length > 0 && <button className="btn" type="button" onClick={retry} disabled={retrying}><RotateCcw size={15} /> Retry my mistakes</button>}
               {wrong.length > 0 && <Link className="btn btn-secondary" to={explainLink}><MessageSquareText size={15} /> {t("explain_mistakes")}</Link>}
               <button className={`btn ${wrong.length ? "btn-ghost" : ""}`} type="button" onClick={onRestart}><Play size={15} /> {reviewing ? "Retake this assessment" : t("try_again")}</button>
-              <a className="btn btn-ghost" href={`/print/assessment/${quiz.id}`} target="_blank" rel="noopener"><FileDown size={15} /> Export PDF</a>
+              <a className="btn btn-ghost" href={`/print/assessment/${quiz.id}`} target="_blank" rel="noopener"><FileDown size={15} /> {t("export_pdf")}</a>
               <Link className="btn btn-ghost" to="/assessments/history"><History size={15} /> History</Link>
             </div>
             {error && <p className="form-error">{error}</p>}

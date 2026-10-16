@@ -1,7 +1,7 @@
 import {
   BookOpen, ClipboardCheck, Languages, LayoutGrid, Library, ListChecks, Menu, ShieldCheck, Sparkles,
 } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, Suspense, useCallback, useContext, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useApp } from "../context/AppContext.jsx";
@@ -9,7 +9,7 @@ import { stopSpeaking } from "../lib/voice.js";
 import Celebration from "./Celebration.jsx";
 import { AccountDialog, FeedbackDialog } from "./Dialogs.jsx";
 import ProfileMenu from "./ProfileMenu.jsx";
-import { Toasts } from "./ui.jsx";
+import { Loading, Toasts } from "./ui.jsx";
 
 const ShellContext = createContext(null);
 
@@ -55,7 +55,7 @@ function Sidebar({ open, onNavigate }) {
           {link("/assessments", ClipboardCheck, t("nav_quiz"), "var(--c-coral)")}
           {link("/notes", BookOpen, t("nav_library"), "var(--c-saffron)")}
           {link("/translate", Languages, t("nav_translate"), "var(--c-leaf)")}
-          {link("/todos", ListChecks, "To-do list", "var(--c-indigo)")}
+          {link("/todos", ListChecks, t("nav_todos"), "var(--c-indigo)")}
         </div>
         {user?.role === "teacher" && (
           <div className="nav-group">
@@ -132,7 +132,7 @@ export default function Shell() {
           {!online && <div className="offline-bar" role="status">{t("offline")}</div>}
           <main id="main" tabIndex={-1} className={fullBleed ? "" : "page"}>
             <div className={fullBleed ? "" : "page-enter"} key={fullBleed ? "chat" : location.pathname}>
-              <Outlet />
+              <Suspense fallback={<Loading />}><Outlet /></Suspense>
             </div>
           </main>
         </div>

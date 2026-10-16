@@ -243,7 +243,7 @@
 
 .tr-head:has(.lang-grid) { display: block; overflow: visible; }
 .lang-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-.lang-grid .lang-chip { min-width: 0; padding: 6px 3px; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; text-align: center; border-radius: 9px; }
+.lang-grid .lang-chip { min-width: 0; padding: 6px 2px; font-size: clamp(11px, 0.95vw, 13px); letter-spacing: -0.01em; overflow: hidden; text-overflow: clip; text-align: center; border-radius: 9px; }
 .lang-grid .lang-chip.auto { font-weight: 600; color: var(--c-indigo); border-style: dashed; border-color: color-mix(in srgb, var(--c-indigo) 45%, var(--rule)); }
 .lang-grid .lang-chip.auto[aria-pressed="true"] { background: var(--c-indigo); border-color: var(--c-indigo); border-style: solid; color: #fff; }
 .tr-pane + .tr-swap + .tr-pane .lang-chip[aria-pressed="true"] { background: var(--c-indigo); border-color: var(--c-indigo); color: #fff; }
@@ -459,3 +459,23 @@
   .todo-add .select, .todo-add .input { flex: 1 1 40%; }
   .todo-actions { opacity: 1; }
 }
+
+/* ------------------------------------------------------------------ toast actions, artwork text */
+
+.toast { align-items: center; }
+.toast-action {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:hover { background: color-mix(in srgb, var(--paper) 14%, transparent); }
+
+/* Letters drawn inside the subject artwork are decoration, not text to select or copy. */
+.subject-art, .subject-logo { user-select: none; -webkit-user-select: none; }

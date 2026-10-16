@@ -9,6 +9,7 @@ import SubjectArt from "../components/SubjectArt.jsx";
 import { CountUp, Dialog, EmptyState, Loading } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import useUndoableDelete from "../lib/useUndoableDelete.js";
 
 const PRIORITIES = [
   ["urgent", "Urgent", "var(--c-coral)"],
@@ -17,9 +18,8 @@ const PRIORITIES = [
   ["low", "Low", "var(--c-teal)"],
 ];
 const PRIORITY = Object.fromEntries(PRIORITIES.map(([id, label, tone], rank) => [id, { label, tone, rank }]));
-const VIEWS = [
-  ["all", "All"], ["active", "To do"], ["today", "Today"], ["upcoming", "Upcoming"], ["overdue", "Overdue"], ["done", "Completed"],
-];
+const VIEWS = ["all", "active", "today", "upcoming", "overdue", "done"];
+const todoPath = (id) => `/api/todos/${id}`;
 const SORTS = [["manual", "My order"], ["due", "Due date"], ["priority", "Priority"], ["newest", "Newest"]];
 
 const isoDay = (date) => {
@@ -193,7 +193,7 @@ function TodoItem({ todo, open, selecting, selected, draggable, onToggleOpen, on
 }
 
 export default function Todos() {
-  const { app, user, notify } = useApp();
+  const { app, user, notify, t, lang } = useApp();
   const [todos, setTodos] = useState(null);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -210,7 +210,7 @@ export default function Todos() {
   const dragId = useRef(null);
   const [dragOver, setDragOver] = useState(null);
   const inputRef = useRef(null);
-  useCrumbs([{ label: "To-do list" }]);
+  useCrumbs([{ label: t("nav_todos") }]);
 
   const load = useCallback(() => api("/api/todos").then((res) => setTodos(res.todos)).catch(() => setTodos([])), []);
   useEffect(() => { load(); }, [load, user?.id]);
@@ -288,16 +288,19 @@ export default function Todos() {
     }
   };
 
-  const remove = async (id) => {
-    const before = todos;
-    setTodos((list) => list.filter((t) => t.id !== id));
-    try {
-      await api(`/api/todos/${id}`, { method: "DELETE" });
-    } catch (err) {
-      setTodos(before);
-      notify(err.message, { kind: "error" });
-    }
-  };
+  // Deleted tasks can be brought back from the toast for a few seconds.
+  const positions = useRef(new Map());
+  const hideTodo = useCallback((todo) => setTodos((list) => {
+    positions.current.set(todo.id, list.findIndex((t) => t.id === todo.id));
+    return list.filter((t) => t.id !== todo.id);
+  }), []);
+  const restoreTodo = useCallback((todo) => setTodos((list) => {
+    if (list.some((t) => t.id === todo.id)) return list;
+    const next = [...list];
+    next.splice(Math.min(positions.current.get(todo.id) ?? 0, next.length), 0, todo);
+    return next;
+  }), []);
+  const removeTodo = useUndoableDelete({ hide: hideTodo, restore: restoreTodo, path: todoPath });
 
   const bulk = async (action, ids) => {
     try {
@@ -351,8 +354,8 @@ export default function Todos() {
       <section className="todo-hero">
         <div>
           <span className="eyebrow">Plan your studies</span>
-          <h1>To-do list</h1>
-          <p className="lede">Homework, revision and reminders in one place. Add steps, due dates and subjects, then tick them off.</p>
+          <h1>{t("nav_todos")}</h1>
+          <p className="lede">{t("todo_sub")} {lang === "en" ? "Add steps, due dates and subjects, then tick them off." : ""}</p>
         </div>
         <div className="todo-progress" aria-label="Completion">
           <svg viewBox="0 0 80 80" width="92" height="92" aria-hidden="true">
@@ -382,14 +385,14 @@ export default function Todos() {
           <option value="">No subject</option>
           {app.subjects.map((s) => <option key={s.slug} value={s.slug}>{s.title}</option>)}
         </select>
-        <button className="btn" type="submit" disabled={!title.trim()}>Add task</button>
+        <button className="btn" type="submit" disabled={!title.trim()}>{t("add_task")}</button>
       </form>
 
       <div className="todo-views" role="tablist" aria-label="Show">
-        {VIEWS.map(([id, label]) => (
+        {VIEWS.map((id) => (
           <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => setView(id)}
             className={id === "overdue" && counts.overdue ? "has-overdue" : ""}>
-            {label} <span className="count">{counts[id]}</span>
+            {t(`view_${id}`)} <span className="count">{counts[id]}</span>
           </button>
         ))}
       </div>
@@ -448,7 +451,7 @@ export default function Todos() {
               onToggleOpen={() => setOpenId((id) => (id === todo.id ? null : todo.id))}
               onSelect={toggleSelect} onUpdate={(patch) => update(todo.id, patch)}
               onDuplicate={() => duplicate(todo.id)}
-              onDelete={() => setConfirm({ title: "Delete task", body: `Delete “${todo.title}”?`, run: () => remove(todo.id) })} />
+              onDelete={() => removeTodo(todo, `Deleted “${todo.title}”`)} />
           ))}
         </ul>
       )}

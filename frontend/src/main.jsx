@@ -8,7 +8,6 @@ import "@fontsource/ibm-plex-sans-devanagari/500.css";
 import "@fontsource/ibm-plex-sans-devanagari/600.css";
 import "@fontsource/source-serif-4/400.css";
 import "@fontsource/source-serif-4/600.css";
-import "katex/dist/katex.min.css";
 import "./styles/tokens.css";
 import "./styles/app.css";
 import "./styles/experience.css";

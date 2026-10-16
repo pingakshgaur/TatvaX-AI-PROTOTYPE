@@ -249,7 +249,7 @@ export function LibraryDocument() {
         actions={<>
           <Link className="btn" to={tutorLink}><MessageSquareText size={15} /> {t("ask_about")}</Link>
           {doc.kind === "subject" && <Link className="btn btn-secondary" to={`/assessments/${doc.slug}`}><ClipboardCheck size={15} /> {t("nav_quiz")}</Link>}
-          <a className="btn btn-ghost" href={`/print/notes/${doc.slug}`} target="_blank" rel="noopener"><FileDown size={15} /> Export PDF</a>
+          <a className="btn btn-ghost" href={`/print/notes/${doc.slug}`} target="_blank" rel="noopener"><FileDown size={15} /> {t("export_pdf")}</a>
         </>} />
       <div className="reader-layout">
         <nav className="toc" aria-label={t("contents")}>

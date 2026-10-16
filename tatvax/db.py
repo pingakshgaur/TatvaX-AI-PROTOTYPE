@@ -1,7 +1,8 @@
 """SQLite storage. One connection per request, WAL mode so streaming answers don't block readers."""
 
+import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app, g
 
@@ -148,12 +149,17 @@ CREATE TABLE IF NOT EXISTS documents (
 """
 
 
+# Days (streaks, daily goals, due dates, "today" in reports) follow the school's clock, not UTC.
+# India by default; set TATVAX_UTC_OFFSET_MINUTES for schools elsewhere (for example 0 or -300).
+SCHOOL_TZ = timezone(timedelta(minutes=int(os.environ.get("TATVAX_UTC_OFFSET_MINUTES", "330"))))
+
+
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(SCHOOL_TZ).isoformat(timespec="seconds")
 
 
 def today() -> str:
-    return datetime.now(timezone.utc).date().isoformat()
+    return datetime.now(SCHOOL_TZ).date().isoformat()
 
 
 def connect(path: str) -> sqlite3.Connection:

@@ -68,11 +68,14 @@ export function AppProvider({ children }) {
 
   const t = useCallback((key, vars) => translate(lang, key, vars), [lang]);
 
-  const notify = useCallback((title, { detail = "", kind = "", duration = 3600 } = {}) => {
+  // A toast can carry one action, such as "Undo": { label, onClick }.
+  const dismissToast = useCallback((id) => setToasts((list) => list.filter((toast) => toast.id !== id)), []);
+  const notify = useCallback((title, { detail = "", kind = "", duration = 3600, action = null } = {}) => {
     const id = ++toastId.current;
-    setToasts((list) => [...list, { id, title, detail, kind }]);
-    setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), duration);
-  }, []);
+    setToasts((list) => [...list, { id, title, detail, kind, action }]);
+    setTimeout(() => dismissToast(id), duration);
+    return id;
+  }, [dismissToast]);
 
   const setLang = useCallback((code) => {
     setLangState(code);
@@ -135,8 +138,8 @@ export function AppProvider({ children }) {
 
   const value = useMemo(() => ({
     app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion,
-    setUser, setLang, notify, celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, retryBoot: boot,
-  }), [app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion, setUser, setLang, notify,
+    setUser, setLang, notify, dismissToast, celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, retryBoot: boot,
+  }), [app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion, setUser, setLang, notify, dismissToast,
     celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, boot]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

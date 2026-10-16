@@ -1,6 +1,7 @@
 // Sanitised Markdown with KaTeX maths.
 import DOMPurify from "dompurify";
 import katex from "katex";
+import "katex/dist/katex.min.css";
 import { marked } from "marked";
 
 marked.setOptions({ breaks: true, gfm: true });
