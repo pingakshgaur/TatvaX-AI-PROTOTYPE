@@ -1,10 +1,9 @@
 // Create a to-do from elsewhere in the app (assessment results, study notes), linked back to that page.
 import { api } from "./api.js";
+import { schoolToday } from "./format.js";
 
 export function tomorrow() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return schoolToday(1);
 }
 
 export default async function addTodo(notify, navigate, todo) {

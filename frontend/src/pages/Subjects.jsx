@@ -9,10 +9,6 @@ import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
 import { timeAgo } from "../lib/format.js";
 
-function chaptersRead(slug) {
-  try { return JSON.parse(localStorage.getItem(`tatvax.read.${slug}`) || "[]").length; } catch { return 0; }
-}
-
 // Compact subject list, used where a short picker is needed.
 export function SubjectRows({ showAll = true }) {
   const { app, t } = useApp();
@@ -44,7 +40,7 @@ export function SubjectRows({ showAll = true }) {
 
 function SubjectCard({ subject, stats, index }) {
   const { t } = useApp();
-  const read = Math.min(chaptersRead(subject.slug), stats?.chapters || 0);
+  const read = Math.min(stats?.read || 0, stats?.chapters || 0);  // chapters marked as read, saved on the account
   const readShare = stats?.chapters ? read / stats.chapters : 0;
   return (
     <article className="atlas-card lift" style={{ "--tone": subject.color, "--i": index }}>

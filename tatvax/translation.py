@@ -18,8 +18,9 @@ class TranslationError(Exception):
 
 
 class Translator:
-    def __init__(self, ai: AIService):
+    def __init__(self, ai: AIService, web: bool = True):
         self.ai = ai
+        self.web = web  # allow the free public web services when the AI can't translate
 
     def translate(self, text: str, target: str, source: str = "auto") -> tuple[str, str]:
         """Return (translated_text, engine). Raises TranslationError if every engine fails."""
@@ -38,6 +39,8 @@ class Translator:
             except AIUnavailable as exc:
                 log.info("AI translation unavailable (%s); trying web endpoints", exc)
 
+        if not self.web:
+            raise TranslationError("Translation needs the AI tutor (web translation is turned off)")
         for engine, func in (("google", _google), ("mymemory", _mymemory)):
             try:
                 result = func(text, source, target)
@@ -47,12 +50,31 @@ class Translator:
                 log.info("%s translation failed: %s", engine, exc)
         raise TranslationError("All translation services are unavailable")
 
+    def translate_lines(self, lines: list[str], target: str, source: str = "en") -> list[str]:
+        """Translate many short strings in one request (one per line). Falls back to one request per
+        string if the line count comes back different. Strings that can't be translated stay as they are."""
+        flat = [" ".join(line.split()) for line in lines]
+        try:
+            joined, _ = self.translate("\n".join(flat), target, source)
+            out = [line.strip() for line in joined.strip().split("\n")]
+            if len(out) == len(flat) and all(out):
+                return out
+        except TranslationError:
+            return list(lines)
+        result = []
+        for line in flat:
+            try:
+                result.append(self.translate(line, target, source)[0])
+            except TranslationError:
+                result.append(line)
+        return result
+
     def _translate_ai(self, text: str, source: str, target: str) -> str:
         system = (
             "You are a translator for an Indian school learning app. Translate the user's text from "
             f"{languages.english_name(source)} into {languages.english_name(target)}. Keep Markdown formatting, "
-            "numbers, formulas and LaTeX unchanged. Use simple words a school student understands. "
-            "Reply with the translation only."
+            "numbers, formulas and LaTeX unchanged, and keep every line break: reply with exactly as many lines "
+            "as the text has. Use simple words a school student understands. Reply with the translation only."
         )
         return self.ai.complete(system, text, max_tokens=4096)
 

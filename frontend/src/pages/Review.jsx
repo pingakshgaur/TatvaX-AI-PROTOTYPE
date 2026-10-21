@@ -8,6 +8,7 @@ import SubjectArt from "../components/SubjectArt.jsx";
 import { CountUp, EmptyState, InlineMarkdown, Loading, Markdown, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { daysFromToday } from "../lib/format.js";
 import useUndoableDelete from "../lib/useUndoableDelete.js";
 
 const KEYS = ["A", "B", "C", "D"];
@@ -22,7 +23,7 @@ const BOXES = [
 const cardPath = (id) => `/api/review/${id}`;
 
 function dueText(due) {
-  const days = Math.round((new Date(`${due}T00:00`) - new Date(new Date().toDateString())) / 86400000);
+  const days = daysFromToday(due);
   if (days <= 0) return "today";
   if (days === 1) return "tomorrow";
   return `in ${days} days`;

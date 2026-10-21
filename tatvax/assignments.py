@@ -41,28 +41,45 @@ def _public(conn, row) -> dict:
 
 
 def _for_student(user) -> str:
-    """SQL condition for the assignments a student can see: their class, or set for every class."""
-    return "archived = 0 AND (grade IS NULL OR grade = ?)" if user["grade"] else "archived = 0"
+    """SQL condition for the assignments a student can see: their class, or set for every class.
+    A student who hasn't chosen a class only sees work set for every class (the class-specific
+    work belongs to classes they aren't counted in)."""
+    return "archived = 0 AND (grade IS NULL OR grade = ?)" if user["grade"] else "archived = 0 AND grade IS NULL"
+
+
+def _status_from(kind: str, done_at: str | None, attempts: list) -> dict:
+    """A student's progress on one assignment. The score is the first finished attempt (the one that
+    shows what they knew); later attempts are practice and only change "best"."""
+    if kind == "reading":
+        return {"state": "done" if done_at else "todo", "completed_at": done_at}
+    finished = sorted((r for r in attempts if r["completed_at"]), key=lambda r: r["completed_at"])
+    if finished:
+        first = finished[0]
+        best = max(finished, key=lambda r: r["score"] / r["total"] if r["total"] else 0)
+        return {"state": "done", "completed_at": first["completed_at"], "quiz_id": first["id"],
+                "score": first["score"], "total": first["total"], "attempts": len(finished),
+                "best_score": best["score"], "best_quiz_id": best["id"]}
+    if attempts:
+        return {"state": "started", "quiz_id": max(r["id"] for r in attempts)}
+    return {"state": "todo"}
 
 
 def _status(conn, assignment_id: int, user_id: int, kind: str) -> dict:
-    if kind == "reading":
-        done = conn.execute("SELECT completed_at FROM assignment_done WHERE assignment_id = ? AND user_id = ?",
-                            (assignment_id, user_id)).fetchone()
-        return {"state": "done" if done else "todo", "completed_at": done["completed_at"] if done else None}
-    rows = conn.execute(
-        """SELECT id, score, total, completed_at FROM quizzes WHERE assignment_id = ? AND user_id = ?
-           ORDER BY completed_at IS NULL, score * 1.0 / total DESC""",
-        (assignment_id, user_id),
-    ).fetchall()
-    finished = [r for r in rows if r["completed_at"]]
-    if finished:
-        best = finished[0]
-        return {"state": "done", "completed_at": min(r["completed_at"] for r in finished), "quiz_id": best["id"],
-                "score": best["score"], "total": best["total"], "attempts": len(finished)}
-    if rows:
-        return {"state": "started", "quiz_id": rows[0]["id"]}
-    return {"state": "todo"}
+    done = conn.execute("SELECT completed_at FROM assignment_done WHERE assignment_id = ? AND user_id = ?",
+                        (assignment_id, user_id)).fetchone()
+    attempts = conn.execute("SELECT id, score, total, completed_at FROM quizzes WHERE assignment_id = ? AND user_id = ?",
+                            (assignment_id, user_id)).fetchall()
+    return _status_from(kind, done["completed_at"] if done else None, attempts)
+
+
+def _all_statuses(conn) -> tuple[dict, dict]:
+    """Every student's attempts and reading ticks for every assignment, loaded in two queries."""
+    attempts: dict = {}
+    for r in conn.execute("SELECT id, assignment_id, user_id, score, total, completed_at FROM quizzes WHERE assignment_id IS NOT NULL"):
+        attempts.setdefault((r["assignment_id"], r["user_id"]), []).append(r)
+    done = {(r["assignment_id"], r["user_id"]): r["completed_at"]
+            for r in conn.execute("SELECT assignment_id, user_id, completed_at FROM assignment_done")}
+    return attempts, done
 
 
 # --------------------------------------------------------------------------- students
@@ -101,8 +118,7 @@ def start_assignment(assignment_id: int):
     if row is None or row["kind"] != "quiz":
         return error("Assignment not found", 404)
     open_quiz = db.execute(
-        """SELECT id FROM quizzes WHERE assignment_id = ? AND user_id = ? AND completed_at IS NULL
-           AND (answers_json IS NULL OR answers_json = '{}') ORDER BY id DESC""",
+        "SELECT id FROM quizzes WHERE assignment_id = ? AND user_id = ? AND completed_at IS NULL ORDER BY id DESC",
         (assignment_id, user["id"]),
     ).fetchone()
     if open_quiz is not None:
@@ -151,11 +167,14 @@ def _class_students(db, grade):
 def list_assignments():
     db = get_db()
     rows = db.execute("SELECT * FROM assignments ORDER BY archived, created_at DESC").fetchall()
+    attempts, done = _all_statuses(db)
+    everyone = _class_students(db, None)
     out = []
     for row in rows:
         item = _public(db, row)
-        students = _class_students(db, row["grade"])
-        states = [_status(db, row["id"], s["id"], row["kind"]) for s in students]
+        students = [s for s in everyone if not row["grade"] or s["grade"] == row["grade"]]
+        states = [_status_from(row["kind"], done.get((row["id"], s["id"])), attempts.get((row["id"], s["id"]), []))
+                  for s in students]
         scored = [s for s in states if s.get("total")]
         item.update(
             students=len(students),

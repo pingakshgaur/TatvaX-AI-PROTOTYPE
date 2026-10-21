@@ -1,29 +1,49 @@
 """The content library: documents stored in the database, seeded from Markdown files,
 plus a BM25 search index over their sections."""
 
+import json
 import math
 import re
 import threading
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-from .db import now_iso
+from .db import get_setting, now_iso, set_setting
 
 KINDS = {"subjects": "subject", "helpdesk": "helpdesk"}
 
 _FRONT_MATTER = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
-_TOKEN = re.compile(r"[a-z0-9]+")
 _STOPWORDS = set(
     """a an the is are was were be been being am of to in on at for from by with and or not no
     what which who whom whose why how when where do does did can could should would will shall may
     might must i me my we our you your he she it its they them their this that these those there
     here about into over under than then so if as tell explain please give show define meaning mean
     describe know want need some any all more most also just very""".split()
+    # Common Hindi function words, so they don't drown out the topic words of a question.
+    + "है हैं था थे की के का को में से पर और या भी यह वह क्या कैसे क्यों कौन मुझे हम आप तुम एक इस उस".split()
 )
 
 
+def words(text: str) -> list[str]:
+    """Split text into words in any script. A word is a run of letters, combining marks (the vowel
+    signs and viramas of Indic scripts) and digits, so "प्रकाश" stays one word."""
+    out, current = [], []
+    for ch in text.lower():
+        if unicodedata.category(ch)[0] in "LMN":
+            current.append(ch)
+        elif current:
+            out.append("".join(current))
+            current = []
+    if current:
+        out.append("".join(current))
+    return out
+
+
 def slugify(text: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    """URL name for a document: Latin titles become "social-studies", other scripts keep their own
+    letters ("विज्ञान"), so a Hindi or Tamil subject still gets a readable, distinct address."""
+    slug = "-".join(words(unicodedata.normalize("NFC", text)))[:60].strip("-")
     return slug or "untitled"
 
 
@@ -49,19 +69,32 @@ def parse_markdown_file(path: Path) -> dict:
 
 
 def seed_documents(conn, content_dir: Path) -> int:
-    """Import Markdown files into an empty documents table. Returns the number imported."""
-    if conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]:
-        return 0
+    """Import the bundled Markdown notes. Each bundled document is imported once: a new install gets
+    them all, an upgraded install gets the ones added in the new version, and a document a teacher
+    deleted or edited is left as the teacher left it. Returns the number imported."""
+    bundled = [(path, kind) for folder, kind in KINDS.items() for path in sorted((content_dir / folder).glob("*.md"))]
+    seeded_raw = get_setting(conn, "content_seeded")
+    if seeded_raw is None:
+        # First run of 2.6.1 or later. An install that already has documents imported the bundled
+        # notes back then (seeding only ever filled an empty library), so count those as done.
+        has_documents = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        seeded = {path.stem for path, _ in bundled} if has_documents else set()
+    else:
+        seeded = set(json.loads(seeded_raw))
     imported = 0
-    for folder, kind in KINDS.items():
-        for path in sorted((content_dir / folder).glob("*.md")):
-            doc = parse_markdown_file(path)
-            conn.execute(
-                """INSERT INTO documents (slug, kind, title, description, icon, color, position, body, updated_at)
-                   VALUES (:slug, :kind, :title, :description, :icon, :color, :position, :body, :updated_at)""",
-                {**doc, "kind": kind, "updated_at": now_iso()},
-            )
-            imported += 1
+    for path, kind in bundled:
+        if path.stem in seeded:
+            continue
+        seeded.add(path.stem)
+        if conn.execute("SELECT 1 FROM documents WHERE slug = ?", (path.stem,)).fetchone():
+            continue
+        conn.execute(
+            """INSERT INTO documents (slug, kind, title, description, icon, color, position, body, updated_at)
+               VALUES (:slug, :kind, :title, :description, :icon, :color, :position, :body, :updated_at)""",
+            {**parse_markdown_file(path), "kind": kind, "updated_at": now_iso()},
+        )
+        imported += 1
+    set_setting(conn, "content_seeded", json.dumps(sorted(seeded)))
     conn.commit()
     return imported
 
@@ -146,10 +179,10 @@ def _singular(token: str) -> str:
 
 def tokenize(text: str) -> list[str]:
     tokens = []
-    for token in _TOKEN.findall(text.lower()):
+    for token in words(unicodedata.normalize("NFC", text)):
         if token in _STOPWORDS or len(token) < 2:
             continue
-        tokens.append(_singular(token))
+        tokens.append(_singular(token) if token.isascii() else token)
     return tokens
 
 

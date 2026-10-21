@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../lib/api.js";
+import { setSchoolClock } from "../lib/format.js";
 import { translate } from "../lib/i18n.js";
+import { forgetUserData, noteUser } from "../lib/session.js";
 
 const AppContext = createContext(null);
 
@@ -60,6 +62,8 @@ export function AppProvider({ children }) {
     setBootError(null);
     try {
       const data = await api("/api/bootstrap");
+      setSchoolClock(data.app.utc_offset_minutes);
+      noteUser(data.user);
       setApp(data.app);
       setUserState(data.user);
       if (data.user?.theme) applyTheme(data.user.theme);
@@ -110,8 +114,17 @@ export function AppProvider({ children }) {
   }, []);
 
   const setUser = useCallback((next) => {
+    noteUser(next);
     setUserState(next);
     if (next && !next.is_guest && next.language) setLangState(next.language);
+  }, []);
+
+  // Sign out and leave nothing personal behind on this device.
+  const signOut = useCallback(async () => {
+    await api("/api/auth/logout", { method: "POST", body: {} });
+    await forgetUserData();
+    noteUser(null);
+    setUserState(null);
   }, []);
 
   // Questions and quizzes create a guest profile on first use; pick it up quietly.
@@ -162,8 +175,8 @@ export function AppProvider({ children }) {
 
   const value = useMemo(() => ({
     app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion,
-    setUser, setLang, notify, dismissToast, celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, retryBoot: boot,
-  }), [app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion, setUser, setLang, notify, dismissToast,
+    setUser, signOut, setLang, notify, dismissToast, celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, retryBoot: boot,
+  }), [app, user, lang, t, online, toasts, bootError, celebrations, xpPop, sound, progressVersion, setUser, signOut, setLang, notify, dismissToast,
     celebrate, dismissCelebration, setSound, refreshUser, reloadApp, languageInfo, boot]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

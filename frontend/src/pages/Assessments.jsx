@@ -8,7 +8,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { Ring } from "../components/Charts.jsx";
 import { useCrumbs } from "../components/Shell.jsx";
 import SubjectArt from "../components/SubjectArt.jsx";
-import { Dialog, InlineMarkdown, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
+import { Dialog, InlineMarkdown, Loading, Markdown, Meter, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import addTodo, { tomorrow } from "../lib/addTodo.js";
 import { api } from "../lib/api.js";
@@ -166,8 +166,11 @@ function QuestionCard({ quiz, index, children }) {
 
 export function PracticeRunner({ quiz, onFinish }) {
   const { t } = useApp();
-  const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState([]);
+  // A resumed assessment carries the answers already given; carry on from the first unanswered question.
+  const given = quiz.progress?.answers || [];
+  const [index, setIndex] = useState(Math.min(given.length, quiz.questions.length - 1));
+  const [answers, setAnswers] = useState(() => given.map(({ choice, correct, answer_index: answerIndex, explanation }) => (
+    { choice, correct, answer_index: answerIndex, explanation })));
   const [result, setResult] = useState(null);
   const [combo, setCombo] = useState(0);
   const [error, setError] = useState("");
@@ -244,18 +247,35 @@ export function PracticeRunner({ quiz, onFinish }) {
   );
 }
 
+const draftKey = (id) => `tatvax.quiz-draft.${id}`;
+
+function loadDraft(id, total) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(draftKey(id)) || "null");
+    if (Array.isArray(saved) && saved.length === total) return saved;
+  } catch { /* storage unavailable */ }
+  return Array(total).fill(null);
+}
+
 export function ExamRunner({ quiz, onFinish }) {
   const { t } = useApp();
   const total = quiz.questions.length;
   const [index, setIndex] = useState(0);
-  const [choices, setChoices] = useState(() => Array(total).fill(null));
+  // Choices are kept on this device until submitted, so a reload doesn't lose them.
+  const [choices, setChoices] = useState(() => loadDraft(quiz.id, total));
   const [flags, setFlags] = useState(() => new Set());
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [left, setLeft] = useState(quiz.time_limit);
-  const started = useRef(Date.now());
+  // The clock is the server's: a resumed timed assessment continues with the time it really has left.
+  const initialLeft = quiz.progress?.seconds_left ?? quiz.time_limit;
+  const [left, setLeft] = useState(initialLeft);
+  const deadline = useRef(Date.now() + (initialLeft ?? 0) * 1000);
+  const started = useRef(Date.now() - (quiz.progress?.elapsed_s ?? 0) * 1000);
   const submitted = useRef(false);
+  useEffect(() => {
+    try { localStorage.setItem(draftKey(quiz.id), JSON.stringify(choices)); } catch { /* storage unavailable */ }
+  }, [choices, quiz.id]);
   const answered = choices.filter((c) => c !== null).length;
 
   const submit = useCallback(async (finalChoices) => {
@@ -267,6 +287,7 @@ export function ExamRunner({ quiz, onFinish }) {
       const finished = await api(`/api/quiz/${quiz.id}/submit`, {
         method: "POST", body: { answers: finalChoices, duration_s: Math.round((Date.now() - started.current) / 1000) },
       });
+      try { localStorage.removeItem(draftKey(quiz.id)); } catch { /* storage unavailable */ }
       onFinish({ finished, choices: finalChoices });
     } catch (err) {
       submitted.current = false;
@@ -281,7 +302,7 @@ export function ExamRunner({ quiz, onFinish }) {
   useEffect(() => {
     if (!quiz.time_limit) return undefined;
     const timer = setInterval(() => {
-      const remaining = quiz.time_limit - Math.floor((Date.now() - started.current) / 1000);
+      const remaining = Math.ceil((deadline.current - Date.now()) / 1000);
       setLeft(remaining);
       if (remaining <= 0) {
         clearInterval(timer);
@@ -393,9 +414,17 @@ export function Results({ quiz, outcome, onRestart, onRetry, review: reviewing =
   };
 
   const firstSubject = quiz.subjects[0]?.slug || "all";
-  const explainLink = `/learn/${quiz.subjects.length === 1 ? firstSubject : "all"}?q=${encodeURIComponent(
-    `I answered these questions incorrectly. Please explain each one simply:\n${wrong.map((w) => `- ${quiz.questions[w.i].question}`).join("\n")}`,
-  )}`;
+  // The tutor takes questions of up to 2000 characters, so list as many mistakes as fit.
+  let explainText = "I answered these questions incorrectly. Please explain each one simply:";
+  let listed = 0;
+  for (const w of wrong) {
+    const line = `\n- ${quiz.questions[w.i].question.replace(/\s+/g, " ").slice(0, 300)}`;
+    if (explainText.length + line.length > 1900) break;
+    explainText += line;
+    listed += 1;
+  }
+  if (listed < wrong.length) explainText += `\n(and ${wrong.length - listed} more)`;
+  const explainLink = `/learn/${quiz.subjects.length === 1 ? firstSubject : "all"}?q=${encodeURIComponent(explainText)}`;
 
   return (
     <div className="assessment">
@@ -478,7 +507,7 @@ export function Results({ quiz, outcome, onRestart, onRetry, review: reviewing =
 // ------------------------------------------------------------------ page
 
 export default function Assessments() {
-  const { t, app } = useApp();
+  const { t, app, notify } = useApp();
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -497,9 +526,32 @@ export default function Assessments() {
     setQuiz(null);
     setOutcome(null);
   }, [params.slug]);
+  // An assessment in progress lives in the address (?quiz=12), so a reload or a link from the
+  // history page carries on with it instead of losing it.
+  const quizParam = Number(searchParams.get("quiz")) || null;
   useEffect(() => {
-    if (location.state?.quiz) navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state, navigate]);
+    if (!quizParam || quiz?.id === quizParam) return undefined;
+    let live = true;
+    api(`/api/quiz/${quizParam}`)
+      .then(({ quiz: detail }) => {
+        if (!live) return;
+        if (detail.finished) navigate(`/assessments/review/${detail.id}`, { replace: true });
+        else { setOutcome(null); setQuiz(detail); }
+      })
+      .catch((err) => {
+        if (!live) return;
+        notify(err.message, { kind: "error" });
+        navigate(location.pathname, { replace: true });
+      });
+    return () => { live = false; };
+  }, [quizParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!quiz && quizParam) return; // still opening the assessment named in the address
+    const want = quiz && !outcome ? String(quiz.id) : null;
+    if ((searchParams.get("quiz") || null) === want && !location.state?.quiz) return;
+    navigate({ pathname: location.pathname, search: want ? `?quiz=${want}` : location.search.replace(/[?&]quiz=\d+/, "") },
+      { replace: true, state: null });
+  }, [quiz, outcome]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { window.scrollTo({ top: 0 }); }, [quiz, outcome]);
 
   const restart = () => { setQuiz(null); setOutcome(null); setRun((n) => n + 1); };
@@ -518,5 +570,6 @@ export default function Assessments() {
       </>
     );
   }
+  if (quizParam && !outcome) return <Loading label="Opening your assessment" />;
   return <Builder key={`${initialSubjects.join()}-${run}`} initialSubjects={initialSubjects} initialTopic={searchParams.get("topic") || ""} onStart={setQuiz} />;
 }

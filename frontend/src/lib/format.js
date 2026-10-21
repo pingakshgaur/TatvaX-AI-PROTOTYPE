@@ -13,6 +13,27 @@ export function timeAgo(iso) {
   return formatter.format(0, "minute");
 }
 
+// Days follow the school's clock (sent by the server), so "today", "overdue" and due dates agree
+// with the server whatever time zone the device is set to.
+let schoolOffsetMinutes = null;
+
+export function setSchoolClock(minutes) {
+  schoolOffsetMinutes = Number.isFinite(minutes) ? minutes : null;
+}
+
+// The school's date as YYYY-MM-DD, optionally a number of days from today.
+export function schoolToday(addDays = 0) {
+  const offset = schoolOffsetMinutes ?? -new Date().getTimezoneOffset();
+  const d = new Date(Date.now() + offset * 60000);
+  d.setUTCDate(d.getUTCDate() + addDays);
+  return d.toISOString().slice(0, 10);
+}
+
+// Whole days from the school's today to a YYYY-MM-DD date (negative when it has passed).
+export function daysFromToday(isoDay) {
+  return Math.round((Date.parse(`${isoDay}T00:00:00Z`) - Date.parse(`${schoolToday()}T00:00:00Z`)) / 86400000);
+}
+
 export function shortDate(isoDay) {
   return new Date(`${isoDay}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }

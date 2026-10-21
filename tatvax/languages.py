@@ -1,5 +1,7 @@
 """Supported languages and script-based language detection."""
 
+import unicodedata
+
 # code: (English name, native name, BCP-47 speech locale, text direction)
 LANGUAGES = {
     "en": ("English", "English", "en-IN", "ltr"),
@@ -41,6 +43,20 @@ _NEPALI_WORDS = ("छ", "हुन्छ", "गर्नु", "तपाईं",
 _ASSAMESE_LETTERS = ("ৰ", "ৱ")  # ৰ ৱ only occur in Assamese
 
 
+def _words(text: str) -> list[str]:
+    """Words in any script (letters, combining vowel signs and digits), split at spaces and punctuation."""
+    out, current = [], []
+    for ch in text:
+        if unicodedata.category(ch)[0] in "LMN":
+            current.append(ch)
+        elif current:
+            out.append("".join(current))
+            current = []
+    if current:
+        out.append("".join(current))
+    return out
+
+
 def is_supported(code: str | None) -> bool:
     return code in LANGUAGES
 
@@ -78,9 +94,11 @@ def detect_language(text: str) -> str:
     lang, count = max(counts.items(), key=lambda item: item[1])
     if count / len(letters) < 0.2:
         return DEFAULT_LANGUAGE
-    if lang == "hi" and ("ळ" in text or any(word in text for word in _MARATHI_WORDS)):
+    # Whole words only: "मला" is Marathi, but it is also the end of the Hindi "हमला" and "कमला".
+    tokens = set(_words(text))
+    if lang == "hi" and ("ळ" in text or tokens & set(_MARATHI_WORDS)):
         return "mr"
-    if lang == "hi" and any(word in text.split() for word in _NEPALI_WORDS):
+    if lang == "hi" and tokens & set(_NEPALI_WORDS):
         return "ne"
     if lang == "bn" and any(letter in text for letter in _ASSAMESE_LETTERS):
         return "as"

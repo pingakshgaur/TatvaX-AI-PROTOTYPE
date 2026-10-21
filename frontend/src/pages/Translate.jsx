@@ -7,6 +7,7 @@ import { useCrumbs } from "../components/Shell.jsx";
 import { PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { copyText } from "../lib/clipboard.js";
 import { canListen, listen, speak } from "../lib/voice.js";
 
 const MAX = 3000;
@@ -148,7 +149,7 @@ export default function Translate() {
               <>
                 <button className="icon-btn" type="button" onClick={() => say(result.text, target)} aria-label={t("listen")}><Volume2 size={16} /></button>
                 <button className="icon-btn" type="button" aria-label={t("copy")}
-                  onClick={() => navigator.clipboard.writeText(result.text).then(() => notify(t("copied")))}><Copy size={16} /></button>
+                  onClick={() => copyText(result.text).then(() => notify(t("copied")), (err) => notify(err.message, { kind: "error" }))}><Copy size={16} /></button>
                 <button className="btn btn-sm" type="button" onClick={() => navigate(`/learn/all?q=${encodeURIComponent(result.text)}`)}>
                   <MessageSquareText size={14} /> Ask the tutor
                 </button>

@@ -100,7 +100,7 @@ function RegisterForm({ onDone }) {
 }
 
 function SettingsForm({ onDone, onFeedback }) {
-  const { t, app, user, setUser, notify, lang, setLang, sound, setSound } = useApp();
+  const { t, app, user, setUser, signOut, notify, lang, setLang, sound, setSound } = useApp();
   const [theme, setTheme] = useState(currentTheme(user));
   const registered = user && !user.is_guest;
   const { error, busy, submit } = useSubmit(async (data) => {
@@ -114,9 +114,8 @@ function SettingsForm({ onDone, onFeedback }) {
     notify("Settings saved", { kind: "success" });
     onDone();
   });
-  const signOut = async () => {
-    await api("/api/auth/logout", { method: "POST", body: {} });
-    setUser(null);
+  const signOutHere = async () => {
+    await signOut();
     notify("Signed out");
     onDone();
   };
@@ -163,7 +162,7 @@ function SettingsForm({ onDone, onFeedback }) {
       )}
       <p className="form-error" role="alert">{error}</p>
       <div className="dialog-footer" style={{ justifyContent: registered ? "space-between" : "flex-end" }}>
-        {registered && <button className="btn btn-ghost" type="button" onClick={signOut}><LogOut size={16} /> {t("sign_out")}</button>}
+        {registered && <button className="btn btn-ghost" type="button" onClick={signOutHere}><LogOut size={16} /> {t("sign_out")}</button>}
         <button className="btn" type="submit" disabled={busy}>{t("save")}</button>
       </div>
     </form>

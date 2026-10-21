@@ -11,6 +11,7 @@ import SubjectArt from "../components/SubjectArt.jsx";
 import { Dialog, EmptyState, Markdown } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api, ApiError, streamChat } from "../lib/api.js";
+import { copyText } from "../lib/clipboard.js";
 import { timeAgo } from "../lib/format.js";
 import { SUGGESTIONS } from "../lib/i18n.js";
 import { plainText } from "../lib/markdown.js";
@@ -44,8 +45,20 @@ function TranslateAnswer({ text, onClose }) {
     setOpen(false);
     setResult({ target, text: null });
     try {
-      const res = await api("/api/translate", { method: "POST", body: { text: text.slice(0, 3000), source: "auto", target } });
-      setResult({ target, text: res.text });
+      // The server translates up to 3000 characters at a time, so long answers go paragraph by paragraph.
+      const parts = [];
+      let current = "";
+      for (const piece of text.split(/\n{2,}/).flatMap((p) => p.match(/[\s\S]{1,2800}/g) || [])) {
+        if (current && current.length + piece.length + 2 > 2800) { parts.push(current); current = ""; }
+        current = current ? `${current}\n\n${piece}` : piece;
+      }
+      if (current.trim()) parts.push(current);
+      const out = [];
+      for (const part of parts) {
+        const res = await api("/api/translate", { method: "POST", body: { text: part, source: "auto", target } });
+        out.push(res.text);
+      }
+      setResult({ target, text: out.join("\n\n") });
     } catch (err) {
       setResult({ target, error: err.message });
     }
@@ -139,7 +152,7 @@ function UserTurn({ message, busy, onEdit, onResend }) {
           </div>
           <div className="prompt-tools" role="toolbar" aria-label="Question tools">
             <button className="icon-btn" type="button" title={t("copy")} aria-label="Copy question"
-              onClick={() => navigator.clipboard.writeText(content).then(() => notify(t("copied")))}><Copy size={14} /></button>
+              onClick={() => copyText(content).then(() => notify(t("copied")), (err) => notify(err.message, { kind: "error" }))}><Copy size={14} /></button>
             <button className="icon-btn" type="button" title="Edit question" aria-label="Edit question"
               disabled={busy || message.id == null} onClick={startEdit}><Pencil size={14} /></button>
             <button className="icon-btn" type="button" title="Ask again" aria-label="Ask this question again"
@@ -182,7 +195,7 @@ function AssistantTurn({ message, canAssess, onAssess, showSuggestions, onAsk, l
               {speaking ? <Square size={15} /> : <Volume2 size={16} />}
             </button>
             <button className="icon-btn" type="button" aria-label={t("copy")} title={t("copy")}
-              onClick={() => navigator.clipboard.writeText(message.content).then(() => notify(t("copied")))}>
+              onClick={() => copyText(message.content).then(() => notify(t("copied")), (err) => notify(err.message, { kind: "error" }))}>
               <Copy size={15} />
             </button>
             <TranslateAnswer text={message.content} />
@@ -243,7 +256,7 @@ function useMicLevel(active) {
 }
 
 export default function Chat({ mode }) {
-  const { t, app, lang, languageInfo, notify, celebrate, user } = useApp();
+  const { t, app, lang, languageInfo, notify, celebrate, user, online } = useApp();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -254,7 +267,8 @@ export default function Chat({ mode }) {
   const base = mode === "helpdesk" ? "/tatvai" : `/learn/${slug}`;
   const title = mode === "helpdesk" ? t("card_helpdesk") : subject ? subject.title : t("all_subjects");
   const suggestionKey = mode === "helpdesk" ? "helpdesk" : SUGGESTIONS[slug] ? slug : "all";
-  const invalidSubject = mode === "subject" && slug !== "all" && !subject;
+  // A saved chat stays open even if its subject's notes were deleted since (it carries on with all the notes).
+  const invalidSubject = mode === "subject" && slug !== "all" && !subject && !conversationId;
 
   useCrumbs(mode === "helpdesk"
     ? [{ label: t("nav_helpdesk") }]
@@ -277,6 +291,11 @@ export default function Chat({ mode }) {
   const stickRef = useRef(true);
   const bufferRef = useRef({ text: "", frame: 0 });
   const initialSent = useRef(false);
+  // Each answer being streamed gets a number; events from an answer that was cancelled (because
+  // another chat was opened) are ignored, so they can't land in the chat now on screen.
+  const runRef = useRef(0);
+  const streamingIdRef = useRef(null); // conversation the current answer belongs to
+  const [announcement, setAnnouncement] = useState("");
 
   const loadHistory = useCallback(async () => {
     const query = new URLSearchParams({ mode });
@@ -287,9 +306,22 @@ export default function Chat({ mode }) {
 
   useEffect(() => { loadHistory(); }, [loadHistory, user?.id]);
 
+  // Stop the answer being written, and make sure nothing more from it reaches the screen.
+  const cancelStream = useCallback(() => {
+    runRef.current += 1;
+    cancelAnimationFrame(bufferRef.current.frame);
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    streamingIdRef.current = null;
+    setBusy(false);
+  }, []);
+
   // Load the selected conversation (unless we just created it while streaming).
   useEffect(() => {
     setHistoryOpen(false);
+    // Opening a different chat while an answer is still arriving stops that answer (the server keeps
+    // what was written so far); otherwise its text would be added to the chat now on screen.
+    if (controllerRef.current && conversationId !== streamingIdRef.current) cancelStream();
     if (!conversationId) {
       if (!controllerRef.current) setMessages([]);
       return;
@@ -315,7 +347,7 @@ export default function Chat({ mode }) {
         else notify(err.message, { kind: "error" });
       });
     return () => { live = false; };
-  }, [conversationId, base, navigate, notify]);
+  }, [conversationId, base, navigate, notify, cancelStream]);
 
   useLayoutEffect(() => {
     const el = threadRef.current;
@@ -346,11 +378,15 @@ export default function Chat({ mode }) {
 
     const controller = new AbortController();
     controllerRef.current = controller;
+    const run = ++runRef.current;
+    const current = () => runRef.current === run;
+    streamingIdRef.current = conversationId || createdIdRef.current || null;
     setBusy(true);
+    setAnnouncement("");
     bufferRef.current = { text: "", frame: 0 };
     const flush = () => {
       bufferRef.current.frame = 0;
-      updateLast({ content: bufferRef.current.text });
+      if (current()) updateLast({ content: bufferRef.current.text });
     };
     const schedule = () => { if (!bufferRef.current.frame) bufferRef.current.frame = requestAnimationFrame(flush); };
 
@@ -359,7 +395,9 @@ export default function Chat({ mode }) {
         message: text, image: image || undefined, mode, subject: mode === "subject" ? slug : undefined,
         language: lang, conversation_id: conversationId || createdIdRef.current || null,
       }, (event) => {
+        if (!current()) return;
         if (event.type === "start") {
+          streamingIdRef.current = event.conversation_id;
           if (!conversationId && createdIdRef.current !== event.conversation_id) {
             createdIdRef.current = event.conversation_id;
             navigate(`${base}/${event.conversation_id}`, { replace: true });
@@ -382,11 +420,13 @@ export default function Chat({ mode }) {
           });
           celebrate(event);
           loadHistory();
+          setAnnouncement(t("answer_ready"));
         } else if (event.type === "error") {
           updateLast({ pending: false, error: event.message });
         }
       }, controller.signal);
     } catch (err) {
+      if (!current()) return; // cancelled because another chat was opened
       cancelAnimationFrame(bufferRef.current.frame);
       if (err.name === "AbortError") {
         updateLast({ content: bufferRef.current.text, pending: false, stopped: true });
@@ -397,11 +437,14 @@ export default function Chat({ mode }) {
         notify(err.message, { kind: "error" });
       }
     } finally {
-      controllerRef.current = null;
-      setBusy(false);
-      textareaRef.current?.focus();
+      if (current()) {
+        controllerRef.current = null;
+        streamingIdRef.current = null;
+        setBusy(false);
+        textareaRef.current?.focus();
+      }
     }
-  }, [base, celebrate, conversationId, lang, loadHistory, mode, navigate, notify, slug]);
+  }, [base, celebrate, conversationId, lang, loadHistory, mode, navigate, notify, slug, t]);
 
   // A question passed from the overview page (?q=) is sent once.
   useEffect(() => {
@@ -490,7 +533,7 @@ export default function Chat({ mode }) {
     }
   };
 
-  const copyDraft = () => navigator.clipboard.writeText(input).then(() => notify(t("copied")));
+  const copyDraft = () => copyText(input).then(() => notify(t("copied")), (err) => notify(err.message, { kind: "error" }));
 
   const confirmDelete = async () => {
     const id = pendingDelete.id;
@@ -509,11 +552,11 @@ export default function Chat({ mode }) {
   }
 
   return (
-    <div className={`chat${navigator.onLine ? "" : " has-offline-bar"}`}>
+    <div className={`chat${online ? "" : " has-offline-bar"}`}>
       <aside className={`chat-history${historyOpen ? " open" : ""}`} aria-label={t("history")}>
         <div className="chat-history-head">
           <Link className="btn btn-block" to={base} onClick={() => {
-            controllerRef.current?.abort();
+            cancelStream();
             createdIdRef.current = null;
             setMessages([]);
             setInput("");
@@ -552,7 +595,9 @@ export default function Chat({ mode }) {
 
         <div className="thread" ref={threadRef}
           onScroll={(e) => { const el = e.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
-          <div className="thread-inner" aria-live="polite">
+          <div className="thread-inner">
+            {/* Announce a finished answer once, instead of every streamed word. */}
+            <span className="sr-only" role="status" aria-live="polite">{announcement}</span>
             {messages.length === 0 ? (
               <div className="chat-start">
                 <span className="eyebrow">{mode === "helpdesk" ? t("nav_helpdesk") : t("card_learn")}</span>

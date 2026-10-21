@@ -110,15 +110,27 @@ PROVIDERS: dict[str, Provider] = {p.id: p for p in [
 _NOT_CHAT = re.compile(r"embed|whisper|tts|speech|audio|image|dall-e|vision-only|moderation|rerank|guard|transcri|realtime|clip|ocr", re.I)
 
 
+# Statuses with which providers turn down a picture they can't read (or a vision model that doesn't exist).
+IMAGE_REJECTED = {400, 404, 415, 422}
+
 _LOOKS_VISUAL = re.compile(r"(vision|[-_.]vl|-vl-|maverick|scout|multimodal|omni)", re.I)
 
 
 class AIUnavailable(Exception):
     """The AI model could not answer; the caller should fall back to the study notes."""
 
-    def __init__(self, message: str, permanent: bool = False):
+    def __init__(self, message: str, permanent: bool = False, status: int | None = None):
         super().__init__(message)
         self.permanent = permanent
+        self.status = status  # HTTP status from the provider, when there was one
+
+
+# Settings rows that configure the AI providers (see AIService.load).
+AI_SETTING_PREFIXES = ("nvidia_api_key", "ai_model", "ai_provider", "api_key:", "base_url:")
+
+
+def settings_signature(settings: dict) -> tuple:
+    return tuple(sorted((k, v) for k, v in settings.items() if k.startswith(AI_SETTING_PREFIXES)))
 
 
 class ImagesUnsupported(AIUnavailable):
@@ -211,6 +223,7 @@ class AIService:
         self.env_keys["nvidia"] = env_key or ""   # NVIDIA's key comes from app config (NVIDIA_API_KEY)
         self.env_model = model or DEFAULT_MODEL
         self.active = "nvidia"
+        self._signature: tuple | None = None
         self.configure(None, None)
         for pid in PROVIDERS:
             if pid != "nvidia":
@@ -262,6 +275,15 @@ class AIService:
                                         settings.get(f"base_url:{pid}"))
         active = settings.get("ai_provider")
         self.active = active if active in PROVIDERS else "nvidia"
+        self._signature = settings_signature(settings)
+
+    def sync(self, settings: dict) -> bool:
+        """Reload when the saved settings differ from the ones in use (another server process may
+        have saved new ones). Returns True if anything was reloaded."""
+        if settings_signature(settings) == self._signature:
+            return False
+        self.load(settings)
+        return True
 
     def set_active(self, pid: str) -> None:
         if pid not in PROVIDERS:
@@ -373,20 +395,20 @@ class AIService:
         if status in (401, 403):
             state.last_error = f"rejected: {name} rejected the API key. Check it and save it again."
             log.error("%s API key rejected: %s", name, message)
-            return AIUnavailable(state.last_error, permanent=True)
+            return AIUnavailable(state.last_error, permanent=True, status=status)
         if status == 404:
             state.last_error = f"The model {state.model!r} isn't available on {name}. Choose another model."
-            return AIUnavailable(state.last_error)
+            return AIUnavailable(state.last_error, status=status)
         if status == 429:
             state.last_error = f"{name}'s rate limit was reached; answers used the study notes meanwhile."
-            return AIUnavailable("Rate limited")
+            return AIUnavailable("Rate limited", status=status)
         if status == 402:
             state.last_error = f"{name} says the account has no credit left."
-            return AIUnavailable(state.last_error)
+            return AIUnavailable(state.last_error, status=status)
         if status:
             state.last_error = f"{name} API error ({status}): {message[:160]}"
             log.warning("%s API error %s: %s", name, status, message)
-            return AIUnavailable(state.last_error)
+            return AIUnavailable(state.last_error, status=status)
         if "connect" in type(exc).__name__.lower() or "timeout" in type(exc).__name__.lower():
             hint = " Is Ollama running?" if state.provider.id == "ollama" else ""
             state.last_error = f"Couldn't reach {name}.{hint}"
@@ -479,7 +501,9 @@ class AIService:
             try:
                 yield from self._stream(state, system, messages, max_tokens)
             except AIUnavailable as exc:
-                if exc.permanent or "rate limit" in str(exc).lower():
+                # Only a rejected request means the model can't take pictures; a timeout, an
+                # outage or a rate limit falls back like any other question.
+                if exc.permanent or exc.status not in IMAGE_REJECTED:
                     raise
                 raise ImagesUnsupported(
                     f"The current AI model ({state.model or state.provider.default_model}) can't read pictures. "
@@ -514,8 +538,9 @@ class AIService:
         state.last_error = ""
         yield "stop", reason
 
-    def complete(self, system: str, prompt: str, max_tokens: int = 2048, json_mode: bool = False) -> str:
-        state = self._check(self.active)
+    def complete(self, system: str, prompt: str, max_tokens: int = 2048, json_mode: bool = False,
+                 pid: str | None = None) -> str:
+        state = self._check(pid or self.active)
         if state.provider.kind == "anthropic":
             return self._anthropic_complete(state, system, prompt, max_tokens)
         kwargs = self._openai_kwargs(state, max_tokens, 0.3)
@@ -527,6 +552,8 @@ class AIService:
         except openai.OpenAIError as exc:
             raise self._fail(state, exc) from exc
         state.last_error = ""
+        if not response.choices:
+            raise AIUnavailable(f"{state.provider.name} returned an empty reply")
         return strip_think(response.choices[0].message.content or "")
 
     def generate_json(self, system: str, prompt: str, max_tokens: int = 4096) -> dict:
@@ -547,11 +574,8 @@ class AIService:
         if not state.configured:
             raise AIUnavailable(f"{state.provider.name} isn't set up yet", permanent=True)
         state.last_error = ""  # allow a retry after fixing a rejected key
-        previous, self.active = self.active, pid
-        try:
-            return self.complete("You are a connection test.", "Reply with exactly: TatvaX is connected.", max_tokens=200)
-        finally:
-            self.active = previous
+        # Test the chosen provider directly; the provider students are using stays active meanwhile.
+        return self.complete("You are a connection test.", "Reply with exactly: TatvaX is connected.", max_tokens=200, pid=pid)
 
     def list_models(self, pid: str) -> list[str]:
         """Chat models the provider offers for this key, newest names first where possible."""

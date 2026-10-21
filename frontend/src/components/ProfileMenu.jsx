@@ -6,7 +6,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
-import { formatNumber } from "../lib/format.js";
+import { formatNumber, schoolToday } from "../lib/format.js";
 
 function AvatarRing({ progress = 0, initial }) {
   const r = 15;
@@ -29,7 +29,7 @@ function AvatarRing({ progress = 0, initial }) {
 }
 
 export default function ProfileMenu({ onAccount }) {
-  const { user, setUser, notify, t, progressVersion } = useApp();
+  const { user, signOut, notify, t, progressVersion } = useApp();
   const [open, setOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [todos, setTodos] = useState(null);
@@ -66,9 +66,8 @@ export default function ProfileMenu({ onAccount }) {
     };
   }, [open]);
 
-  const signOut = async () => {
-    await api("/api/auth/logout", { method: "POST", body: {} });
-    setUser(null);
+  const signOutHere = async () => {
+    await signOut();
     setOpen(false);
     notify("Signed out");
   };
@@ -102,7 +101,7 @@ export default function ProfileMenu({ onAccount }) {
   const goal = stats?.goal ?? { done: 0, goal: user?.daily_goal ?? 5 };
   const listed = (todos || []).filter((x) => !x.done || x.touched);
   const openCount = (todos || []).filter((x) => !x.done).length;
-  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const today = schoolToday();
   const close = () => setOpen(false);
 
   return (
@@ -193,7 +192,7 @@ export default function ProfileMenu({ onAccount }) {
             {registered && (
               <>
                 <div className="menu-sep" />
-                <button type="button" className="menu-item danger" role="menuitem" onClick={signOut}><LogOut size={16} /> {t("sign_out")}</button>
+                <button type="button" className="menu-item danger" role="menuitem" onClick={signOutHere}><LogOut size={16} /> {t("sign_out")}</button>
               </>
             )}
           </div>

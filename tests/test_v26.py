@@ -165,7 +165,7 @@ def test_models_that_cannot_read_pictures_get_a_clear_message(monkeypatch):
 
     def rejecting(*_args, **_kwargs):
         from tatvax.ai import AIUnavailable
-        raise AIUnavailable("NVIDIA API error (400): image input not supported")
+        raise AIUnavailable("NVIDIA API error (400): image input not supported", status=400)
         yield  # pragma: no cover
 
     monkeypatch.setattr(service, "_stream", rejecting)

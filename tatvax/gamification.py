@@ -14,6 +14,11 @@ QUIZ_COMPLETION_XP = 10
 QUIZ_CORRECT_XP = 5
 QUIZ_PERFECT_BONUS_XP = 20
 TIMED_BONUS_XP = 10
+# Assessment XP (completion, correct answers and bonuses) is capped per day, so retaking the same
+# assessment over and over can't climb the leaderboard.
+QUIZ_XP_DAILY_CAP = 250
+QUIZ_XP_REASONS = ("quiz", "perfect_quiz", "timed_bonus")
+TIME_GRACE_S = 30  # matches quiz.TIME_GRACE_S
 
 DEFAULT_DAILY_GOAL = 5
 
@@ -132,15 +137,25 @@ def record_question(conn, user_id: int, mode: str, subject: str | None, language
     return _reward(conn, user_id, xp_before, gained)
 
 
-def record_quiz(conn, user_id: int, score: int, total: int, mode: str = "practice") -> dict:
+def record_quiz(conn, user_id: int, score: int, total: int, mode: str = "practice", on_time: bool = True) -> dict:
     xp_before = _xp(conn, user_id)
     first_today = _touch_day(conn, user_id, quizzes=1)
     gained = award_xp(conn, user_id, "daily_bonus", DAILY_BONUS_XP) if first_today else 0
-    gained += award_xp(conn, user_id, "quiz", QUIZ_COMPLETION_XP + QUIZ_CORRECT_XP * score)
-    if total >= 5 and score == total:
-        gained += award_xp(conn, user_id, "perfect_quiz", QUIZ_PERFECT_BONUS_XP)
-    if mode == "timed" and total and score / total >= 0.8:
-        gained += award_xp(conn, user_id, "timed_bonus", TIMED_BONUS_XP)
+    marks = ", ".join("?" for _ in QUIZ_XP_REASONS)
+    earned_today = conn.execute(
+        f"SELECT COALESCE(SUM(points), 0) FROM xp_events WHERE user_id = ? AND reason IN ({marks}) AND created_at >= ?",
+        (user_id, *QUIZ_XP_REASONS, today()),
+    ).fetchone()[0]
+    room = max(0, QUIZ_XP_DAILY_CAP - earned_today)
+    for reason, points, earned in (
+        ("quiz", QUIZ_COMPLETION_XP + QUIZ_CORRECT_XP * score, True),
+        ("perfect_quiz", QUIZ_PERFECT_BONUS_XP, total >= 5 and score == total),
+        ("timed_bonus", TIMED_BONUS_XP, mode == "timed" and on_time and total and score / total >= 0.8),
+    ):
+        if earned and room:
+            points = min(points, room)
+            room -= points
+            gained += award_xp(conn, user_id, reason, points)
     return _reward(conn, user_id, xp_before, gained)
 
 
@@ -187,7 +202,7 @@ def check_badges(conn, user_id: int) -> list[dict]:
         (user_id,),
     ).fetchone()
     quizzes = conn.execute(
-        "SELECT subject, subjects_json, score, total, mode FROM quizzes WHERE user_id = ? AND completed_at IS NOT NULL",
+        "SELECT subject, subjects_json, score, total, mode, time_limit, duration_s FROM quizzes WHERE user_id = ? AND completed_at IS NOT NULL",
         (user_id,),
     ).fetchall()
     quiz_subjects = {s for q in quizzes for s in _quiz_subjects(q)}
@@ -201,7 +216,9 @@ def check_badges(conn, user_id: int) -> list[dict]:
         "perfect_quiz": any(q["total"] >= 5 and q["score"] == q["total"] for q in quizzes),
         "quiz_master": len(quizzes) >= 10,
         "marathon": any(q["total"] >= 20 for q in quizzes),
-        "speedster": any(q["mode"] == "timed" and q["total"] and q["score"] / q["total"] >= 0.8 for q in quizzes),
+        "speedster": any(q["mode"] == "timed" and q["total"] and q["score"] / q["total"] >= 0.8
+                         and (q["duration_s"] is None or q["time_limit"] is None or q["duration_s"] <= q["time_limit"] + TIME_GRACE_S)
+                         for q in quizzes),
         "explorer": len(quiz_subjects) >= 3,
         "streak_3": streak >= 3,
         "streak_7": streak >= 7,
@@ -280,7 +297,7 @@ def leaderboard(conn, limit: int = 10) -> list[dict]:
     rows = conn.execute(
         """SELECT u.id, u.name, SUM(x.points) AS weekly_xp, u.xp
            FROM xp_events x JOIN users u ON u.id = x.user_id
-           WHERE x.created_at >= ? AND u.is_guest = 0 AND u.leaderboard = 1
+           WHERE x.created_at >= ? AND u.is_guest = 0 AND u.leaderboard = 1 AND u.role = 'student'
            GROUP BY u.id ORDER BY weekly_xp DESC, u.xp DESC LIMIT ?""",
         (since, limit),
     ).fetchall()

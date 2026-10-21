@@ -143,10 +143,16 @@ export function segments(lines) {
   return out.filter((s) => s.lines.join("").trim());
 }
 
+// Before 2.6.1, chapters read were kept only in this browser. They're now saved on the account;
+// any left in the browser are moved across the first time the notes are opened.
 function readKey(slug) { return `tatvax.read.${slug}`; }
 
-function loadRead(slug) {
-  try { return new Set(JSON.parse(localStorage.getItem(readKey(slug)) || "[]")); } catch { return new Set(); }
+function takeLocalRead(slug) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(readKey(slug)) || "[]");
+    localStorage.removeItem(readKey(slug));
+    return Array.isArray(saved) ? saved.filter((id) => /^ch-\d+$/.test(id)) : [];
+  } catch { return []; }
 }
 
 function Topic({ topic, docSlug, kind }) {
@@ -181,7 +187,7 @@ export function LibraryDocument() {
   const [doc, setDoc] = useState(null);
   const [error, setError] = useState("");
   const [active, setActive] = useState("");
-  const [read, setRead] = useState(() => loadRead(slug));
+  const [read, setRead] = useState(() => new Set());
   const [scrolled, setScrolled] = useState(0);
   const notesRef = useRef(null);
 
@@ -190,8 +196,20 @@ export function LibraryDocument() {
   useEffect(() => {
     setDoc(null);
     setError("");
-    setRead(loadRead(slug));
+    setRead(new Set());
     api(`/api/library/${encodeURIComponent(slug)}`).then((res) => setDoc(res.document)).catch((err) => setError(err.message));
+    let live = true;
+    api(`/api/library/${encodeURIComponent(slug)}/read`).then(async ({ read: saved }) => {
+      const local = takeLocalRead(slug);
+      let chapters = saved;
+      if (local.some((id) => !saved.includes(id))) {
+        chapters = (await api(`/api/library/${encodeURIComponent(slug)}/read`, {
+          method: "PUT", body: { read: [...new Set([...saved, ...local])] },
+        })).read;
+      }
+      if (live) setRead(new Set(chapters));
+    }).catch(() => {});
+    return () => { live = false; };
   }, [slug]);
 
   const chapters = useMemo(() => (doc ? parseNotes(doc.body) : []), [doc]);
@@ -230,13 +248,14 @@ export function LibraryDocument() {
     return () => observer.disconnect();
   }, [chapters, searchParams]);
 
-  const toggleRead = (id) => setRead((set) => {
-    const next = new Set(set);
+  const toggleRead = (id) => {
+    const next = new Set(read);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    try { localStorage.setItem(readKey(slug), JSON.stringify([...next])); } catch { /* storage unavailable */ }
-    return next;
-  });
+    setRead(next);
+    api(`/api/library/${encodeURIComponent(slug)}/read`, { method: "PUT", body: { read: [...next] } })
+      .catch((err) => { setRead(read); notify(err.message, { kind: "error" }); });
+  };
 
   if (error) return <EmptyState title="Notes not found" action={<Link className="btn" to="/notes">{t("library_title")}</Link>}>{error}</EmptyState>;
   if (!doc) return <Loading />;

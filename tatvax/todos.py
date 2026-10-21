@@ -169,6 +169,8 @@ def duplicate_todo(todo_id: int):
     row = _own(db, user, todo_id) if user else None
     if row is None:
         return error("Task not found", 404)
+    if db.execute("SELECT COUNT(*) FROM todos WHERE user_id = ?", (user["id"],)).fetchone()[0] >= MAX_TODOS:
+        return error(f"You can keep up to {MAX_TODOS} tasks. Clear some completed ones first.")
     cur = db.execute(
         """INSERT INTO todos (user_id, title, notes, priority, due_date, subject, tags, subtasks, link, position,
                               created_at, updated_at)

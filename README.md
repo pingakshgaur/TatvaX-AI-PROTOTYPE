@@ -1,4 +1,4 @@
-# TatvaX v2.6
+# TatvaX v2.6.1
 
 **A multilingual AI tutor, assessment platform and AI school companion for Indian students.**
 
@@ -7,6 +7,58 @@ Students ask questions by typing or speaking in any of 16 Indian languages, get 
 [Watch the v1 prototype in action](https://youtu.be/hqo_TAZh0ls)
 
 ---
+
+## What's new in version 2.6.1
+
+A bug-fix release. Every fix to the server has a regression test (124 backend tests in total).
+
+**Fixed**
+- **Questions with a photo work again.** The security policy blocked the browser from shrinking a photo, so every photo failed with "That picture couldn't be opened".
+- **Claude can be used on a fresh install**: the `anthropic` package is now in `requirements.txt`.
+- **Stopping an answer keeps the question.** Pressing Stop, or losing the connection, used to leave an empty chat in the history; the question and the answer so far are now saved.
+- **Opening another chat while an answer is arriving** stops that answer instead of mixing its text into the chat you opened.
+- **Assessments can be resumed.** A reload or "Continue" from the history picks up where you left off: practice answers so far, exam choices made on this device, and the time really left in a timed assessment. A half-done assignment is continued instead of restarted.
+- Copy buttons work when TatvaX is opened at a plain `http://` address on the school network.
+- "Explain my mistakes" works with any number of mistakes (it used to go over the 2000-character limit).
+- Long answers are translated in full, not cut off after 3000 characters.
+- A chat in a subject that was later deleted carries on with all the notes.
+
+**Fair assessments and rewards**
+- Exam and timed answers can no longer be seen one at a time before submitting.
+- Assessment XP is capped at 250 a day, and retakes share the assessment rate limit, so retaking the same test can't climb the leaderboard.
+- The server keeps the time: late timed submissions are graded but earn no timed bonus or Speedster badge.
+- Attempts at a teacher's assignment can't be deleted, and teachers see the first try's score (with the best score and number of tries alongside).
+- An assessment can't be submitted twice at the same moment for double XP.
+
+**Security and privacy**
+- Signing up while signed in is refused; it used to overwrite the account (a teacher could turn into a student).
+- Signing out clears this device's personal data (translation history, quiz drafts, reminders and offline copies of the profile and progress), which matters on shared school computers.
+- API keys set as server environment variables can't be revealed in the teacher console.
+- The AI server address can't point at cloud metadata services.
+- The leaderboard is only shown to people using the app, and lists students only.
+- `TATVAX_WEB_TRANSLATION=off` stops student text being sent to the free public translation services when no AI provider is set up.
+- Upgraded DOMPurify, KaTeX, React Router (now version 7) and Vite to fix their published security advisories (`npm audit`: 0 vulnerabilities).
+
+**Correct numbers**
+- Progress reports count every question, including "All subjects" and TatvAI.
+- In mixed assessments, each subject is scored on its own questions (reports, the Subjects page and the teacher console).
+- Students who haven't chosen a class see only the work set for every class.
+- Chapters marked as read are saved on the account and follow you to other devices (marks kept only in the browser are moved across).
+- Dates such as "today" and "overdue" follow the school's clock on every device.
+
+**Languages**
+- Study notes written in Indian scripts can be searched (and used by the tutor), and get readable addresses such as `/notes/विज्ञान`.
+- Hindi text containing words like "हमला" is no longer detected as Marathi.
+- Question-bank assessments are translated in one request instead of about 60.
+
+**Running TatvaX**
+- With several server processes, AI settings saved in the teacher console reach every process.
+- "Test connection" no longer switches the AI provider students are using while it runs.
+- Worker processes starting together share one secret key, so nobody is signed out at random.
+- A photo question that fails because of a timeout or outage says so, instead of blaming the picture.
+- Notes added in a new version are imported on upgrade (notes a teacher edited or deleted are left alone).
+- Smaller fixes: failed photo answers earn no XP, duplicating a task respects the 500-task limit, the offline cache no longer grows with every page visited, and screen readers announce a finished answer once instead of every word.
+- The frontend now needs **Node.js 20+** to build.
 
 ## What's new in version 2.6
 
@@ -53,7 +105,7 @@ Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingaks
 | Motivation | None | XP, levels, daily streaks, 10 achievements, weekly class leaderboard |
 | Teachers | None | Teacher console: analytics, student table, content editor, feedback inbox |
 | Security | Hard-coded secret key, `debug=True` on `0.0.0.0`, feedback (with emails) saved to a public folder | Generated secret, local-only dev server, strict CSP, JSON-only writes (CSRF defence), rate limits, private feedback |
-| Tests | None | 90 backend tests, run on every push by GitHub Actions |
+| Tests | None | 124 backend tests, run on every push by GitHub Actions |
 
 Bugs fixed from v1 include: speech output stripped the vowel signs (matras) from every Indic sentence; good translations were thrown away whenever they contained the word "error"; word replacements turned "hardware" into "needs practiceware"; voice input crashed; the app crashed at start-up on a default Windows console.
 
@@ -88,7 +140,7 @@ From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentica
 
 ## Quick start
 
-You need **Python 3.10+** and **Node.js 18+**.
+You need **Python 3.10+** and **Node.js 20+**.
 
 ```bash
 git clone https://github.com/pingakshgaur/TatvaX-AI-PROTOTYPE.git

@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from flask import Blueprint
 
 from . import gamification, knowledge, review
+from .quiz import subject_scores
 from .db import get_db, today
 from .security import error, require_role
 from .users import current_user
@@ -18,15 +19,16 @@ def student_report(conn, user_id: int) -> dict:
     user = conn.execute("SELECT id, name, grade, is_guest, created_at FROM users WHERE id = ?", (user_id,)).fetchone()
     progress = gamification.progress(conn, user_id)
 
+    # In a mixed assessment, each subject is scored on its own questions only.
+    per_subject = subject_scores(conn.execute(
+        "SELECT subject, questions_json, answers_json FROM quizzes WHERE user_id = ? AND completed_at IS NOT NULL AND total > 0",
+        (user_id,),
+    ).fetchall())
     subjects = []
     for doc in knowledge.list_documents(conn, "subject"):
         slug = doc["slug"]
         questions = conn.execute("SELECT COUNT(*) FROM question_log WHERE user_id = ? AND subject = ?", (user_id, slug)).fetchone()[0]
-        scores = [100 * r["score"] / r["total"] for r in conn.execute(
-            """SELECT score, total FROM quizzes WHERE user_id = ? AND completed_at IS NOT NULL AND total > 0
-               AND (subject = ? OR subjects_json LIKE ?)""",
-            (user_id, slug, f'%"{slug}"%'),
-        )]
+        scores = per_subject.get(slug, [])
         cards = conn.execute("SELECT COUNT(*) FROM review_cards WHERE user_id = ? AND subject = ? AND box < ?",
                              (user_id, slug, review.MASTERED)).fetchone()[0]
         subjects.append({
@@ -53,7 +55,7 @@ def student_report(conn, user_id: int) -> dict:
     if user and not user["is_guest"]:
         grade = user["grade"]
         rows = conn.execute(
-            "SELECT id, kind FROM assignments WHERE archived = 0" + (" AND (grade IS NULL OR grade = ?)" if grade else ""),
+            "SELECT id, kind FROM assignments WHERE archived = 0" + (" AND (grade IS NULL OR grade = ?)" if grade else " AND grade IS NULL"),
             (grade,) if grade else (),
         ).fetchall()
         assigned = len(rows)
@@ -74,7 +76,8 @@ def student_report(conn, user_id: int) -> dict:
         "level": progress["level"], "xp": progress["xp"], "streak": progress["streak"],
         "badges": [b for b in progress["badges"] if b["earned"]], "badges_total": len(progress["badges"]),
         "totals": {
-            "questions": sum(s["questions"] for s in subjects),
+            # Every question asked, including "All subjects" and TatvAI, as on the Progress page.
+            "questions": progress["questions_total"],
             "assessments": finished[0], "average": round(finished[1]) if finished[1] is not None else None,
             "answered": finished[2] or 0, "correct": finished[3] or 0,
             "active_days": sum(1 for d in activity if d["questions"] or d["quizzes"]),

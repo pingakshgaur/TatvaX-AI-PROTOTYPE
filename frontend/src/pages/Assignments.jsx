@@ -8,12 +8,13 @@ import SubjectArt from "../components/SubjectArt.jsx";
 import { EmptyState, Loading, PageHeader } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { daysFromToday } from "../lib/format.js";
 
 const FILTERS = [["todo", "To do"], ["done", "Finished"], ["all", "All"]];
 
 export function dueLabel(due) {
   if (!due) return null;
-  const days = Math.round((new Date(`${due}T00:00`) - new Date(new Date().toDateString())) / 86400000);
+  const days = daysFromToday(due);
   if (days < 0) return { text: `${-days} day${days === -1 ? "" : "s"} overdue`, state: "overdue" };
   if (days === 0) return { text: "Due today", state: "today" };
   if (days === 1) return { text: "Due tomorrow", state: "soon" };
@@ -110,7 +111,10 @@ export default function Assignments() {
                   <span className="ac-meta">
                     {a.subjects.map((s) => s.title).join(", ")}{a.topic ? ` · ${a.topic}` : ""}
                     {due && <span className={`due ${due.state}`}><CalendarDays size={12} /> {due.text}</span>}
-                    {done && a.status.total != null && <span className="ac-score">Best score {a.status.score}/{a.status.total}</span>}
+                    {done && a.status.total != null && (
+                      <span className="ac-score">Score {a.status.score}/{a.status.total}
+                        {a.status.attempts > 1 ? ` · best ${a.status.best_score}/${a.status.total}` : ""}</span>
+                    )}
                     {done && a.kind === "reading" && <span className="ac-score">Finished</span>}
                   </span>
                 </div>

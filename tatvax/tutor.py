@@ -196,7 +196,13 @@ class Tutor:
             if convo is None:
                 raise ValueError("Conversation not found")
             mode, subject = convo["mode"], convo["subject"]  # a conversation keeps its original scope
-            docs, scope = self.resolve_scope(conn, mode, subject)
+            try:
+                docs, scope = self.resolve_scope(conn, mode, subject)
+            except ValueError:
+                if mode != "subject":
+                    raise
+                # The subject's notes were deleted since; carry on with all the notes instead.
+                docs, scope = self.resolve_scope(conn, "subject", "all")
         else:
             docs, scope = self.resolve_scope(conn, mode, subject)
             title = question.strip().replace("\n", " ")
@@ -208,76 +214,113 @@ class Tutor:
             conversation_id = cur.lastrowid
             conn.commit()
         history = self.load_history(conn, conversation_id)
-
-        yield {"type": "start", "conversation_id": conversation_id}
-
-        system, inlined = self.build_system(mode, docs)
         api_question = self.student_context(user, language) + "\n\n"
-        if not inlined:
-            api_question += self.retrieved_notes(conn, question, docs)
-        api_question += question
-
         text, engine, sources, suggestions = "", "library", [], []
-        asked = [m["content"] for m in self._asked(conn, conversation_id)] + [question]
-        ai_attempted = self.ai.available
-        if ai_attempted:
-            try:
-                chunks = []
-                splitter = followups.FollowupSplitter()
-                asking = {"role": "user", "content": api_question, **({"image": image} if image else {})}
-                for kind, value in self.ai.stream_reply(system, history + [asking]):
-                    if kind == "text":
-                        visible = splitter.feed(value)
-                        if visible:
-                            chunks.append(visible)
-                            yield {"type": "delta", "text": visible}
-                rest, block = splitter.finish()
-                if rest:
-                    chunks.append(rest)
-                    yield {"type": "delta", "text": rest}
-                # Drop a stray closing divider some models write before the follow-up marker.
-                text = re.sub(r"\n\s*(?:-{3,}|\*{3,})\s*$", "", "".join(chunks).strip()).strip()
-                engine = "ai"
-                suggestions = followups.parse(block, asked)
-            except ImagesUnsupported as exc:
-                text = str(exc)
-                yield {"type": "replace", "text": text}
-            except AIUnavailable as exc:
-                log.warning("Falling back to library answer: %s", exc)
-                text = ""
-        if not text.strip() and image:
-            text = ("Questions with a picture need the AI tutor, which isn't available right now. "
-                    "Please type the question instead and I'll answer from the study notes.")
-            yield {"type": "replace", "text": text}
-        if not text.strip():
-            text, sources = self.library_answer(conn, question, mode, docs, language)
-            if ai_attempted:
-                text += "\n\n_(The AI tutor is unavailable right now, so this answer comes from the study notes.)_"
-            yield {"type": "replace", "text": text}
-        if len(suggestions) < 2:
-            suggestions = self.note_suggestions(conn, question, mode, docs, language, asked)
+        counts = True  # whether this question earns XP and counts towards the daily goal
+        saved = False
 
-        asked_row = conn.execute(
-            "INSERT INTO messages (conversation_id, role, content, api_content, language, created_at) VALUES (?, 'user', ?, ?, ?, ?)",
-            # The photo itself isn't kept; the saved question notes that one was attached.
-            (conversation_id, f"{PHOTO_MARK}{question}" if image else question,
-             (api_question + "\n\n(The student attached a photo with this question.)" if image else api_question)
-             if engine == "ai" else None, language, now_iso()),
-        )
-        cur = conn.execute(
-            """INSERT INTO messages (conversation_id, role, content, language, engine, suggestions, created_at)
-               VALUES (?, 'assistant', ?, ?, ?, ?, ?)""",
-            (conversation_id, text, language, engine, json.dumps(suggestions, ensure_ascii=False), now_iso()),
-        )
-        conn.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now_iso(), conversation_id))
-        reward = gamification.record_question(conn, user["id"], mode, scope if scope != "all" else None, language)
-        conn.commit()
+        def save() -> dict | None:
+            """Store the question and the answer so far. Runs once, also when the student stops the
+            answer or the connection drops part-way (then the reply is kept as far as it got)."""
+            nonlocal saved
+            if saved:
+                return None
+            saved = True
+            asked_row = conn.execute(
+                "INSERT INTO messages (conversation_id, role, content, api_content, language, created_at) VALUES (?, 'user', ?, ?, ?, ?)",
+                # The photo itself isn't kept; the saved question notes that one was attached.
+                (conversation_id, f"{PHOTO_MARK}{question}" if image else question,
+                 (api_question + "\n\n(The student attached a photo with this question.)" if image else api_question)
+                 if engine == "ai" else None, language, now_iso()),
+            )
+            answer_id = None
+            if text.strip():
+                cur = conn.execute(
+                    """INSERT INTO messages (conversation_id, role, content, language, engine, suggestions, created_at)
+                       VALUES (?, 'assistant', ?, ?, ?, ?, ?)""",
+                    (conversation_id, text, language, engine, json.dumps(suggestions, ensure_ascii=False), now_iso()),
+                )
+                answer_id = cur.lastrowid
+            conn.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now_iso(), conversation_id))
+            reward = gamification.record_question(conn, user["id"], mode, scope if scope != "all" else None, language) if counts else None
+            conn.commit()
+            return {"user_message_id": asked_row.lastrowid, "message_id": answer_id, "reward": reward}
+
+        try:
+            yield {"type": "start", "conversation_id": conversation_id}
+
+            system, inlined = self.build_system(mode, docs)
+            if not inlined:
+                api_question += self.retrieved_notes(conn, question, docs)
+            api_question += question
+
+            asked = [m["content"] for m in self._asked(conn, conversation_id)] + [question]
+            ai_attempted = self.ai.available
+            if ai_attempted:
+                try:
+                    chunks = []
+                    splitter = followups.FollowupSplitter()
+                    asking = {"role": "user", "content": api_question, **({"image": image} if image else {})}
+                    engine = "ai"  # so a stopped answer is saved with the prompt it was given
+                    for kind, value in self.ai.stream_reply(system, history + [asking]):
+                        if kind == "text":
+                            visible = splitter.feed(value)
+                            if visible:
+                                chunks.append(visible)
+                                text = "".join(chunks)
+                                yield {"type": "delta", "text": visible}
+                    rest, block = splitter.finish()
+                    if rest:
+                        chunks.append(rest)
+                        yield {"type": "delta", "text": rest}
+                    # Drop a stray closing divider some models write before the follow-up marker.
+                    text = re.sub(r"\n\s*(?:-{3,}|\*{3,})\s*$", "", "".join(chunks).strip()).strip()
+                    suggestions = followups.parse(block, asked)
+                except ImagesUnsupported as exc:
+                    text, engine, counts = str(exc), "library", False
+                    yield {"type": "replace", "text": text}
+                except AIUnavailable as exc:
+                    log.warning("Falling back to library answer: %s", exc)
+                    text, engine = "", "library"
+            if not text.strip() and image:
+                text, counts = ("Questions with a picture need the AI tutor, which isn't available right now. "
+                                "Please type the question instead and I'll answer from the study notes."), False
+                yield {"type": "replace", "text": text}
+            if not text.strip():
+                text, sources = self.library_answer(conn, question, mode, docs, language)
+                if ai_attempted:
+                    text += "\n\n_(The AI tutor is unavailable right now, so this answer comes from the study notes.)_"
+                yield {"type": "replace", "text": text}
+            if len(suggestions) < 2:
+                suggestions = self.note_suggestions(conn, question, mode, docs, language, asked)
+        except GeneratorExit:
+            # Stopped by the student, or the connection dropped: keep the question and the partial answer.
+            if text.strip():
+                text = text.rstrip() + "\n\n_(Stopped before the answer was finished.)_"
+            suggestions = []
+            try:
+                save()
+            except Exception:
+                log.exception("Couldn't save a stopped answer")
+            raise
+        except Exception:
+            # Something unexpected broke the answer: keep at least the question, then report the error.
+            counts = False
+            try:
+                save()
+            except Exception:
+                log.exception("Couldn't save the question after a failed answer")
+            raise
+
+        stored = save()
+        reward = stored["reward"] or {"level_up": None, "xp": 0, "badges": [],
+                                      "goal": {**gamification.daily_goal_status(conn, user["id"]), "reached_now": False, "bonus_xp": 0}}
         xp_total = conn.execute("SELECT xp FROM users WHERE id = ?", (user["id"],)).fetchone()["xp"]
 
         yield {
             "type": "done",
-            "message_id": cur.lastrowid,
-            "user_message_id": asked_row.lastrowid,
+            "message_id": stored["message_id"],
+            "user_message_id": stored["user_message_id"],
             "engine": engine,
             "sources": sources,
             "suggestions": suggestions,

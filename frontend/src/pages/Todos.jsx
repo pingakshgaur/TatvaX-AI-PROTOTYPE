@@ -11,6 +11,7 @@ import SubjectArt from "../components/SubjectArt.jsx";
 import { CountUp, Dialog, EmptyState, Loading } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { daysFromToday, schoolToday } from "../lib/format.js";
 import useUndoableDelete from "../lib/useUndoableDelete.js";
 
 const PRIORITIES = [
@@ -24,12 +25,8 @@ const VIEWS = ["all", "active", "today", "upcoming", "overdue", "done"];
 const todoPath = (id) => `/api/todos/${id}`;
 const SORTS = [["manual", "My order"], ["due", "Due date"], ["priority", "Priority"], ["newest", "Newest"]];
 
-const isoDay = (date) => {
-  const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return d.toISOString().slice(0, 10);
-};
-const todayIso = () => isoDay(new Date());
-const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDay(d); };
+const todayIso = () => schoolToday();
+const addDays = (n) => schoolToday(n);
 
 function dueLabel(due) {
   if (!due) return null;
@@ -37,7 +34,7 @@ function dueLabel(due) {
   if (due === today) return { text: "Today", state: "today" };
   if (due === addDays(1)) return { text: "Tomorrow", state: "soon" };
   if (due < today) {
-    const days = Math.round((new Date(`${today}T00:00`) - new Date(`${due}T00:00`)) / 86400000);
+    const days = -daysFromToday(due);
     return { text: days === 1 ? "Yesterday" : `${days} days overdue`, state: "overdue" };
   }
   return { text: new Date(`${due}T00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" }), state: "later" };

@@ -7,13 +7,14 @@ three modes: practice (feedback after every question), exam (feedback at the end
 import json
 import logging
 import random
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import gamification, knowledge, languages, review
 from .ai import AIService, AIUnavailable
 from .db import now_iso
-from .translation import TranslationError, Translator
+from .translation import Translator
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ DIFFICULTIES = {"easy", "medium", "hard", "mixed"}
 MODES = {"practice", "exam", "timed"}
 MIN_QUESTIONS, MAX_QUESTIONS = 3, 30
 SECONDS_PER_QUESTION = {"easy": 45, "medium": 60, "hard": 90, "mixed": 60}
+TIME_GRACE_S = 30  # allowance for a slow connection when a timed assessment is submitted at the buzzer
 BATCH_SIZE = 5
 
 QUIZ_PROMPT = """You write multiple-choice quizzes for school students in India, based on the school's \
@@ -53,6 +55,42 @@ def _shuffle_options(question: dict) -> dict:
     random.shuffle(order)
     return {**question, "options": [question["options"][i] for i in order],
             "answer_index": order.index(question["answer_index"])}
+
+
+def _elapsed(quiz) -> int:
+    """Seconds since the assessment was created, measured by the server."""
+    try:
+        started = datetime.fromisoformat(quiz["created_at"])
+    except (TypeError, ValueError):
+        return 0
+    return max(0, int((datetime.now(started.tzinfo) - started).total_seconds()))
+
+
+def subject_results(questions: list[dict], answers: dict) -> dict[str, list[int]]:
+    """{subject slug: [correct, total]} for one assessment, counting each question under its own subject."""
+    out: dict[str, list[int]] = {}
+    for i, q in enumerate(questions):
+        entry = out.setdefault(q.get("subject") or "", [0, 0])
+        entry[0] += answers.get(str(i)) == q.get("answer_index")
+        entry[1] += 1
+    return out
+
+
+def subject_scores(rows) -> dict[str, list[float]]:
+    """Per-subject percentages over finished assessments (rows need subject, questions_json and
+    answers_json). In a mixed assessment each subject is scored on its own questions only."""
+    scores: dict[str, list[float]] = {}
+    for row in rows:
+        try:
+            questions = json.loads(row["questions_json"])
+            answers = json.loads(row["answers_json"] or "{}")
+        except (TypeError, ValueError):
+            continue
+        for slug, (correct, total) in subject_results(questions, answers).items():
+            slug = slug or row["subject"]
+            if total:
+                scores.setdefault(slug, []).append(100 * correct / total)
+    return scores
 
 
 def _split(count: int, parts: int) -> list[int]:
@@ -105,18 +143,11 @@ class QuizMaster:
         return [_shuffle_options({k: q[k] for k in ("question", "options", "answer_index", "explanation")}) for q in chosen]
 
     def _translate(self, questions: list[dict], language: str) -> list[dict]:
+        """Translate bank questions in a single request rather than one request per string."""
         strings = []
         for q in questions:
             strings.extend([q["question"], *q["options"], q["explanation"]])
-
-        def one(text: str) -> str:
-            try:
-                return self.translator.translate(text, language, "en")[0]
-            except TranslationError:
-                return text
-
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            translated = iter(list(pool.map(one, strings)))
+        translated = iter(self.translator.translate_lines(strings, language, "en"))
         return [
             {**q, "question": next(translated), "options": [next(translated) for _ in range(4)],
              "explanation": next(translated)}
@@ -226,21 +257,34 @@ class QuizMaster:
                            "subject_title": q.get("subject_title")} for q in questions],
         }
 
-    def _load(self, conn, user, quiz_id: int):
+    def _load(self, conn, user, quiz_id: int, modes: set[str]):
         quiz = conn.execute("SELECT * FROM quizzes WHERE id = ? AND user_id = ?", (quiz_id, user["id"])).fetchone()
         if quiz is None:
             raise QuizError("Quiz not found")
         if quiz["completed_at"]:
             raise QuizError("This assessment is already finished")
+        if (quiz["mode"] or "practice") not in modes:
+            # Practice shows each answer straight away; exam and timed modes only at the end.
+            raise QuizError("Exam assessments are submitted all at once" if "practice" in modes
+                            else "Practice assessments are answered one question at a time")
         return quiz, json.loads(quiz["questions_json"])
 
     def _finish(self, conn, user, quiz, questions: list[dict], answers: dict, duration_s: int | None) -> dict:
         score = sum(1 for i, q in enumerate(questions) if answers.get(str(i)) == q["answer_index"])
-        conn.execute(
-            "UPDATE quizzes SET answers_json = ?, score = ?, completed_at = ?, duration_s = ? WHERE id = ?",
+        mode = quiz["mode"] or "practice"
+        elapsed = _elapsed(quiz)
+        # The server's clock decides how long an exam took. A practice run can be resumed later, so
+        # the learner's own timer is used there, but it can never be longer than the real time.
+        duration_s = elapsed if mode != "practice" or duration_s is None else max(0, min(duration_s, elapsed))
+        on_time = mode != "timed" or bool(quiz["time_limit"] and elapsed <= quiz["time_limit"] + TIME_GRACE_S)
+        cur = conn.execute(
+            "UPDATE quizzes SET answers_json = ?, score = ?, completed_at = ?, duration_s = ? WHERE id = ? AND completed_at IS NULL",
             (json.dumps(answers), score, now_iso(), duration_s, quiz["id"]),
         )
-        reward = gamification.record_quiz(conn, user["id"], score, len(questions), quiz["mode"] or "practice")
+        if not cur.rowcount:  # a second submission that arrived at the same moment
+            conn.rollback()
+            raise QuizError("This assessment is already finished")
+        reward = gamification.record_quiz(conn, user["id"], score, len(questions), mode, on_time=on_time)
         review.add_missed(conn, user["id"], questions, answers)
         xp_total = conn.execute("SELECT xp FROM users WHERE id = ?", (user["id"],)).fetchone()["xp"]
 
@@ -253,6 +297,7 @@ class QuizMaster:
             "score": score,
             "total": len(questions),
             "duration_s": duration_s,
+            "late": not on_time,
             "breakdown": list(breakdown.values()),
             "xp_gained": reward["xp"],
             "badges": reward["badges"],
@@ -263,7 +308,7 @@ class QuizMaster:
 
     def answer(self, conn, user, quiz_id: int, index: int, choice: int, duration_s: int | None = None) -> dict:
         """Practice mode: grade one question immediately; finishes the quiz on the last answer."""
-        quiz, questions = self._load(conn, user, quiz_id)
+        quiz, questions = self._load(conn, user, quiz_id, {"practice"})
         answers = json.loads(quiz["answers_json"] or "{}")
         if not (0 <= index < len(questions)) or not (0 <= choice < 4):
             raise QuizError("Invalid answer")
@@ -285,7 +330,7 @@ class QuizMaster:
 
     def submit(self, conn, user, quiz_id: int, choices: list, duration_s: int | None = None) -> dict:
         """Exam and timed modes: grade every answer at once. Unanswered questions (None) count as wrong."""
-        quiz, questions = self._load(conn, user, quiz_id)
+        quiz, questions = self._load(conn, user, quiz_id, {"exam", "timed"})
         if not isinstance(choices, list) or len(choices) != len(questions):
             raise QuizError("Send one answer (or null) per question")
         answers = {}
@@ -335,7 +380,7 @@ class QuizMaster:
         titles = {r["slug"]: (r["title"], r["color"]) for r in conn.execute("SELECT slug, title, color FROM documents")}
         rows = conn.execute(
             """SELECT id, subject, subjects_json, topic, mode, difficulty, total, score, engine, language,
-                      created_at, completed_at, duration_s, answers_json
+                      created_at, completed_at, duration_s, answers_json, assignment_id
                FROM quizzes WHERE user_id = ? ORDER BY id DESC LIMIT ?""",
             (user["id"], limit),
         ).fetchall()
@@ -347,6 +392,7 @@ class QuizMaster:
                 "total": r["total"], "score": r["score"], "engine": r["engine"], "language": r["language"],
                 "created_at": r["created_at"], "completed_at": r["completed_at"], "duration_s": r["duration_s"],
                 "answered": len(json.loads(r["answers_json"] or "{}")),
+                "assignment_id": r["assignment_id"],
                 "subjects": [{"slug": s, "title": titles.get(s, (s, ""))[0], "color": titles.get(s, ("", "#0f5a57"))[1]}
                              for s in slugs],
             })
@@ -362,7 +408,20 @@ class QuizMaster:
         docs = [d for d in (knowledge.get_document(conn, s) for s in slugs) if d]
         public = self._public(quiz["id"], docs, quiz["topic"] or "", quiz["difficulty"], quiz["mode"] or "practice",
                               quiz["time_limit"], quiz["engine"], questions)
-        public.update(created_at=quiz["created_at"], completed_at=quiz["completed_at"], language=quiz["language"])
+        public.update(created_at=quiz["created_at"], completed_at=quiz["completed_at"], language=quiz["language"],
+                      assignment_id=quiz["assignment_id"])
+        if not quiz["completed_at"]:
+            # Enough to carry on where the learner left off: the practice answers given so far (their
+            # results were already shown) and, for timed mode, the time left on the server's clock.
+            answers = json.loads(quiz["answers_json"] or "{}") if (quiz["mode"] or "practice") == "practice" else {}
+            elapsed = _elapsed(quiz)
+            public["progress"] = {
+                "answers": [{"index": int(i), "choice": c, "correct": c == questions[int(i)]["answer_index"],
+                             "answer_index": questions[int(i)]["answer_index"], "explanation": questions[int(i)]["explanation"]}
+                            for i, c in sorted(answers.items(), key=lambda item: int(item[0]))],
+                "elapsed_s": elapsed,
+                "seconds_left": max(0, quiz["time_limit"] - elapsed) if quiz["time_limit"] else None,
+            }
         if quiz["completed_at"]:
             answers = json.loads(quiz["answers_json"] or "{}")
             breakdown: dict[str, dict] = {}
@@ -401,7 +460,10 @@ class QuizMaster:
                             quiz["engine"], questions)
 
     def delete(self, conn, user, quiz_id: int) -> None:
-        cur = conn.execute("DELETE FROM quizzes WHERE id = ? AND user_id = ?", (quiz_id, user["id"]))
-        if not cur.rowcount:
+        quiz = conn.execute("SELECT assignment_id FROM quizzes WHERE id = ? AND user_id = ?", (quiz_id, user["id"])).fetchone()
+        if quiz is None:
             raise QuizError("Quiz not found")
+        if quiz["assignment_id"] and conn.execute("SELECT 1 FROM assignments WHERE id = ?", (quiz["assignment_id"],)).fetchone():
+            raise QuizError("Attempts at an assignment are kept for your teacher, so they can't be deleted")
+        conn.execute("DELETE FROM quizzes WHERE id = ?", (quiz_id,))
         conn.commit()

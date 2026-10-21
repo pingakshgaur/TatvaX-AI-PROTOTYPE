@@ -145,11 +145,16 @@ export function AssessmentHistory() {
                 )}
                 <div className="hc-actions">
                   {q.completed_at && <Link className="btn btn-sm btn-secondary" to={`/assessments/review/${q.id}`}><Eye size={14} /> {t("review_btn")}</Link>}
-                  <button className="btn btn-sm" type="button" onClick={() => retake(q.id)}><Play size={14} /> {t("retake")}</button>
+                  {q.completed_at
+                    ? <button className="btn btn-sm" type="button" onClick={() => retake(q.id)}><Play size={14} /> {t("retake")}</button>
+                    : <Link className="btn btn-sm" to={`/assessments?quiz=${q.id}`}><Play size={14} /> Continue</Link>}
                   <a className="icon-btn bordered" href={`/print/assessment/${q.id}`} target="_blank" rel="noopener"
                     title="Export PDF" aria-label={`Export ${title(q)} as PDF`}><FileDown size={15} /></a>
-                  <button className="icon-btn bordered" type="button" title="Delete" aria-label={`Delete ${title(q)}`}
-                    onClick={() => removeQuiz(q, "Assessment deleted")}><Trash2 size={15} /></button>
+                  {/* Attempts at a teacher's assignment are kept for the teacher. */}
+                  {!q.assignment_id && (
+                    <button className="icon-btn bordered" type="button" title="Delete" aria-label={`Delete ${title(q)}`}
+                      onClick={() => removeQuiz(q, "Assessment deleted")}><Trash2 size={15} /></button>
+                  )}
                 </div>
               </article>
             );
@@ -179,8 +184,9 @@ export function AssessmentReview() {
   if (!quiz) return <Loading />;
   if (!quiz.finished) {
     return (
-      <EmptyState title="This assessment wasn't finished" action={<button className="btn" type="button" onClick={() => retake(quiz.id)}><Play size={15} /> Retake it</button>}>
-        Only finished assessments can be reviewed.
+      <EmptyState title="This assessment isn't finished yet"
+        action={<Link className="btn" to={`/assessments?quiz=${quiz.id}`}><Play size={15} /> Continue it</Link>}>
+        Finish it to see your score and review every answer.
       </EmptyState>
     );
   }

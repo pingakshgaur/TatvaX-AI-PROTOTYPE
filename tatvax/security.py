@@ -23,6 +23,7 @@ class RateLimiter:
         self._lock = threading.Lock()
         self._database: str | None = None
         self._local = threading.local()
+        self._calls = 0
 
     def configure(self, database: str | None) -> None:
         self._database = database
@@ -59,6 +60,9 @@ class RateLimiter:
         try:
             conn.execute("BEGIN IMMEDIATE")  # one process at a time, so two can't both take the last slot
             conn.execute("DELETE FROM rate_hits WHERE key = ? AND at < ?", (key, now - window))
+            self._calls += 1
+            if self._calls % 200 == 0:  # now and then, drop old hits of keys nobody has used lately
+                conn.execute("DELETE FROM rate_hits WHERE at < ?", (now - 3600,))
             count = conn.execute("SELECT COUNT(*) FROM rate_hits WHERE key = ?", (key,)).fetchone()[0]
             allowed = count < limit
             if allowed:

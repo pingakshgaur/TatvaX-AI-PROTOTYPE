@@ -6,6 +6,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { schoolToday } from "../lib/format.js";
 import { stopSpeaking } from "../lib/voice.js";
 import Celebration from "./Celebration.jsx";
 import { AccountDialog, FeedbackDialog } from "./Dialogs.jsx";
@@ -114,7 +115,7 @@ export default function Shell() {
   const { notify, user } = useApp();
   useEffect(() => {
     if (!user) return;
-    const day = new Date().toDateString();
+    const day = schoolToday();
     try { if (localStorage.getItem("tatvax.reminded") === day) return; } catch { return; }
     api("/api/todos/summary").then((s) => {
       const due = s.today + s.overdue;

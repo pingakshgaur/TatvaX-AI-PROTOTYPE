@@ -7,9 +7,9 @@ import re
 from flask import Blueprint, Response, current_app, request, stream_with_context
 
 from . import gamification, knowledge, languages, speech
-from .db import connect, get_db, now_iso
+from .db import SCHOOL_TZ, connect, get_db, now_iso, today
 from .knowledge import library_index
-from .quiz import QuizError
+from .quiz import QuizError, subject_scores
 from .security import error, limiter
 from .translation import TranslationError
 from .users import current_user, public_user
@@ -42,6 +42,9 @@ def bootstrap():
             "subjects": knowledge.list_documents(db, "subject"),
             "helpdesk": helpdesk[0] if helpdesk else None,
             "tts_languages": sorted(code for code in languages.LANGUAGES if code in speech.supported_languages()),
+            # Days (due dates, "today", streaks) follow the school's clock, not the device's.
+            "today": today(),
+            "utc_offset_minutes": int(SCHOOL_TZ.utcoffset(None).total_seconds() // 60),
         },
         "user": public_user(current_user()),
     }
@@ -88,6 +91,9 @@ def chat():
     except ValueError as exc:
         conn.close()
         return error(str(exc), 404 if "not found" in str(exc) else 400)
+    except Exception:
+        conn.close()
+        raise
 
     def generate():
         try:
@@ -181,7 +187,7 @@ def delete_conversation(conversation_id: int):
 def create_quiz():
     data = request.get_json(silent=True) or {}
     user = current_user(create=True)
-    if not limiter.allow(f"quiz:{user['id']}", 6):
+    if _quiz_rate_limited(user):
         return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
     subjects = data.get("subjects")
     if not isinstance(subjects, list):
@@ -232,11 +238,17 @@ def submit_quiz(quiz_id: int):
         return error(str(exc), 404 if "not found" in str(exc) else 400)
 
 
+def _quiz_rate_limited(user) -> bool:
+    return not limiter.allow(f"quiz:{user['id']}", 6)
+
+
 @bp.post("/quiz/<int:quiz_id>/retry")
 def retry_quiz(quiz_id: int):
     user = current_user()
     if user is None:
         return error("Quiz not found", 404)
+    if _quiz_rate_limited(user):
+        return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
     try:
         return {"quiz": services().quizmaster.retry_mistakes(get_db(), user, quiz_id)}, 201
     except QuizError as exc:
@@ -267,6 +279,8 @@ def retake_quiz(quiz_id: int):
     user = current_user()
     if user is None:
         return error("Quiz not found", 404)
+    if _quiz_rate_limited(user):
+        return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
     try:
         return {"quiz": services().quizmaster.retake(get_db(), user, quiz_id)}, 201
     except QuizError as exc:
@@ -281,7 +295,7 @@ def delete_quiz(quiz_id: int):
     try:
         services().quizmaster.delete(get_db(), user, quiz_id)
     except QuizError as exc:
-        return error(str(exc), 404)
+        return error(str(exc), 404 if "not found" in str(exc) else 409)
     return {"ok": True}
 
 
@@ -290,6 +304,16 @@ def subjects_overview():
     """Per-subject facts for the Subjects page: size of the notes and the learner's own activity."""
     db = get_db()
     user = current_user()
+    scores, last_quiz, read = {}, {}, {}
+    if user is not None:
+        rows = db.execute("SELECT subject, questions_json, answers_json, completed_at FROM quizzes "
+                          "WHERE user_id = ? AND completed_at IS NOT NULL", (user["id"],)).fetchall()
+        scores = subject_scores(rows)
+        for row in rows:
+            for slug in {q.get("subject") or row["subject"] for q in json.loads(row["questions_json"])}:
+                last_quiz[slug] = max(last_quiz.get(slug, ""), row["completed_at"])
+        read = {r["slug"]: r["n"] for r in db.execute(
+            "SELECT slug, COUNT(*) AS n FROM notes_read WHERE user_id = ? GROUP BY slug", (user["id"],))}
     out = []
     for doc in knowledge.list_documents(db, "subject"):
         body = knowledge.get_document(db, doc["slug"])["body"]
@@ -300,18 +324,15 @@ def subjects_overview():
             "chapter_titles": [re.sub(r"^Chapter\s+\d+\s*[:.-]\s*", "", line[3:].strip(), flags=re.I)
                                for line in body.splitlines() if line.startswith("## ")][:8],
             "topics": len(sections),
-            "questions": 0, "quizzes": 0, "average": None, "last_active": None,
+            "questions": 0, "quizzes": 0, "average": None, "last_active": None, "read": 0,
         }
         if user is not None:
             q = db.execute("SELECT COUNT(*), MAX(created_at) FROM question_log WHERE user_id = ? AND subject = ?",
                            (user["id"], doc["slug"])).fetchone()
-            z = db.execute(
-                """SELECT COUNT(*), AVG(100.0 * score / total), MAX(completed_at) FROM quizzes
-                   WHERE user_id = ? AND completed_at IS NOT NULL AND (subject = ? OR subjects_json LIKE ?)""",
-                (user["id"], doc["slug"], f'%"{doc["slug"]}"%'),
-            ).fetchone()
-            item.update(questions=q[0], quizzes=z[0], average=round(z[1]) if z[1] is not None else None,
-                        last_active=max(filter(None, [q[1], z[2]]), default=None))
+            mine = scores.get(doc["slug"], [])
+            item.update(questions=q[0], quizzes=len(mine), average=round(sum(mine) / len(mine)) if mine else None,
+                        last_active=max(filter(None, [q[1], last_quiz.get(doc["slug"])]), default=None),
+                        read=read.get(doc["slug"], 0))
         out.append(item)
     return {"subjects": out}
 
@@ -329,7 +350,9 @@ def progress():
 @bp.get("/leaderboard")
 def leaderboard():
     user = current_user()
-    return {"leaderboard": gamification.leaderboard(get_db()), "me": user["id"] if user else None}
+    if user is None:  # learners' names are only shown to people using the app
+        return {"leaderboard": [], "me": None}
+    return {"leaderboard": gamification.leaderboard(get_db()), "me": user["id"]}
 
 
 # --------------------------------------------------------------------------- library
@@ -346,6 +369,35 @@ def library_document(slug: str):
         return error("Document not found", 404)
     doc.pop("updated_by", None)
     return {"document": doc}
+
+
+_CHAPTER_ID = re.compile(r"^ch-\d{1,4}$")
+
+
+@bp.get("/library/<slug>/read")
+def notes_read(slug: str):
+    user = current_user()
+    if user is None:
+        return {"read": []}
+    rows = get_db().execute("SELECT chapter FROM notes_read WHERE user_id = ? AND slug = ?", (user["id"], slug)).fetchall()
+    return {"read": [r["chapter"] for r in rows]}
+
+
+@bp.put("/library/<slug>/read")
+def save_notes_read(slug: str):
+    """Replace the list of chapters marked as read in one document."""
+    db = get_db()
+    if knowledge.get_document(db, slug) is None:
+        return error("Document not found", 404)
+    chapters = (request.get_json(silent=True) or {}).get("read")
+    if not isinstance(chapters, list) or len(chapters) > 500 or not all(isinstance(c, str) and _CHAPTER_ID.match(c) for c in chapters):
+        return error("Send the chapters read, like [\"ch-0\", \"ch-2\"]")
+    user = current_user(create=True)
+    db.execute("DELETE FROM notes_read WHERE user_id = ? AND slug = ?", (user["id"], slug))
+    db.executemany("INSERT OR IGNORE INTO notes_read (user_id, slug, chapter, read_at) VALUES (?, ?, ?, ?)",
+                   [(user["id"], slug, c, now_iso()) for c in chapters])
+    db.commit()
+    return {"read": sorted(set(chapters), key=lambda c: int(c[3:]))}
 
 
 @bp.get("/search")

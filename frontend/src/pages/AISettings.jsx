@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loading, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
+import { copyText } from "../lib/clipboard.js";
 import { timeAgo } from "../lib/format.js";
 
 // Providers with a free tier (or, for Ollama, no cost at all).
@@ -71,14 +72,18 @@ function ProviderPanel({ provider: p, allowed, recommended, onChanged }) {
 
   useEffect(() => { setKey(""); setRevealed(null); setLive(null); setError(""); setTestResult(null); }, [p.id]);
 
-  const fetchKey = async () => (await api(`/api/admin/ai/key?provider=${p.id}`)).api_key;
+  const fetchKey = async () => {
+    const res = await api(`/api/admin/ai/key?provider=${p.id}`);
+    if (!res.api_key) throw new Error(res.message || "No key is saved for this provider.");
+    return res.api_key;
+  };
   const reveal = async () => {
     if (revealed) { setRevealed(null); return; }
     try { setRevealed(await fetchKey()); } catch (err) { setError(err.message); }
   };
   const copyKey = async () => {
     try {
-      await navigator.clipboard.writeText(revealed || (await fetchKey()));
+      await copyText(revealed || (await fetchKey()));
       notify("API key copied");
     } catch (err) {
       setError(err.message);

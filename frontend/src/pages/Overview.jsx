@@ -9,7 +9,7 @@ import SubjectArt from "../components/SubjectArt.jsx";
 import { CountUp } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
-import { timeAgo } from "../lib/format.js";
+import { schoolToday, timeAgo } from "../lib/format.js";
 
 // What needs attention today: to-dos due or overdue, review cards and unfinished class work.
 function TodayPlan() {
@@ -39,7 +39,7 @@ function TodayPlan() {
       notify(err.message, { kind: "error" });
     }
   };
-  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const today = schoolToday();
 
   return (
     <section className="section today-plan">

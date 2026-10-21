@@ -1,7 +1,9 @@
 """Accounts. Every visitor gets a guest profile on first use; registering upgrades it in
 place and logging in merges guest progress into the existing account."""
 
+import hmac
 import re
+import sqlite3
 
 from flask import Blueprint, current_app, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -70,6 +72,10 @@ def _merge_guest_into(db, guest_id: int, user_id: int) -> None:
     )
     db.execute(
         "INSERT OR IGNORE INTO badges (user_id, badge, earned_at) SELECT ?, badge, earned_at FROM badges WHERE user_id = ?",
+        (user_id, guest_id),
+    )
+    db.execute(
+        "INSERT OR IGNORE INTO notes_read (user_id, slug, chapter, read_at) SELECT ?, slug, chapter, read_at FROM notes_read WHERE user_id = ?",
         (user_id, guest_id),
     )
     db.execute(
@@ -147,29 +153,42 @@ def register():
         return error("Password must be at least 8 characters")
 
     db = get_db()
-    if db.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
-        return error("An account with this email already exists", 409)
-
-    # The first account on a fresh install becomes the teacher/admin. After that, teacher
-    # accounts need the TATVAX_TEACHER_CODE.
-    has_registered = db.execute("SELECT 1 FROM users WHERE is_guest = 0 LIMIT 1").fetchone()
-    teacher_code = current_app.config["TEACHER_CODE"]
-    role = "student"
-    if not has_registered:
-        role = "teacher"
-    elif data.get("teacher_code"):
-        if not teacher_code or data["teacher_code"] != teacher_code:
-            return error("That teacher code isn't valid")
-        role = "teacher"
-
     user = current_user(create=True)
+    if not user["is_guest"]:
+        # Signing up upgrades the guest profile in place, so it must never overwrite a real account.
+        return error("You're already signed in. Sign out first to create another account.", 409)
     language = data.get("language") if languages.is_supported(data.get("language")) else user["language"]
-    db.execute(
-        """UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, is_guest = 0, language = ?
-           WHERE id = ?""",
-        (name, email, generate_password_hash(password), role, language, user["id"]),
-    )
-    db.commit()
+    password_hash = generate_password_hash(password)
+
+    # One sign-up at a time, so two people can't both become the first teacher or take the same email.
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        if db.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
+            db.rollback()
+            return error("An account with this email already exists", 409)
+
+        # The first account on a fresh install becomes the teacher/admin. After that, teacher
+        # accounts need the TATVAX_TEACHER_CODE.
+        has_registered = db.execute("SELECT 1 FROM users WHERE is_guest = 0 LIMIT 1").fetchone()
+        teacher_code = current_app.config["TEACHER_CODE"]
+        role = "student"
+        if not has_registered:
+            role = "teacher"
+        elif data.get("teacher_code"):
+            if not teacher_code or not hmac.compare_digest(str(data["teacher_code"]), teacher_code):
+                db.rollback()
+                return error("That teacher code isn't valid")
+            role = "teacher"
+
+        db.execute(
+            """UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, is_guest = 0, language = ?
+               WHERE id = ?""",
+            (name, email, password_hash, role, language, user["id"]),
+        )
+        db.commit()
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return error("An account with this email already exists", 409)
     _login(user["id"])
     return {"user": public_user(current_user())}, 201
 

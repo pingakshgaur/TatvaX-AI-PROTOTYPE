@@ -7,7 +7,11 @@ import time
 
 from flask import Blueprint, current_app, request
 
+import ipaddress
+from urllib.parse import urlparse
+
 from . import gamification, knowledge
+from .quiz import subject_scores
 from .ai import PROVIDERS, RECOMMENDED_MODELS, AIUnavailable
 from .db import get_db, get_setting, now_iso, set_setting, today
 from .security import error, require_role
@@ -57,12 +61,16 @@ def overview():
     by_language = [dict(r) for r in db.execute(
         "SELECT language AS label, COUNT(*) AS value FROM question_log GROUP BY language ORDER BY value DESC"
     )]
-    quiz_scores = [dict(r) for r in db.execute(
-        """SELECT COALESCE(d.title, q.subject) AS label, COUNT(*) AS quizzes,
-                  ROUND(AVG(100.0 * q.score / q.total)) AS average
-           FROM quizzes q LEFT JOIN documents d ON d.slug = q.subject
-           WHERE q.completed_at IS NOT NULL GROUP BY q.subject ORDER BY average"""
-    )]
+    # Per subject, scoring each subject on its own questions (mixed assessments are split up).
+    titles = {d["slug"]: d["title"] for d in knowledge.list_documents(db)}
+    per_subject = subject_scores(db.execute(
+        "SELECT subject, questions_json, answers_json FROM quizzes WHERE completed_at IS NOT NULL AND total > 0"
+    ).fetchall())
+    quiz_scores = sorted(
+        ({"label": titles.get(slug, slug), "quizzes": len(values), "average": round(sum(values) / len(values))}
+         for slug, values in per_subject.items() if values),
+        key=lambda row: row["average"],
+    )
     return {
         "counts": {**dict(counts), "quiz_average": round(counts["quiz_average"] or 0)},
         "questions_per_day": [{"day": d, "value": per_day.get(d, 0)} for d in days],
@@ -229,6 +237,19 @@ def _provider_from(data) -> str:
     return pid
 
 
+def _blocked_host(url: str) -> bool:
+    """Cloud metadata services live on link-local addresses; an AI server address must never point there.
+    A local Ollama or a server on the school network (localhost, 192.168.x.x ...) is still allowed."""
+    host = (urlparse(url).hostname or "").strip("[]").lower()
+    if host in {"metadata", "metadata.google.internal", "metadata.goog"}:
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_link_local or address.is_multicast or address.is_unspecified
+
+
 @bp.get("/ai")
 @require_role("teacher")
 def ai_settings():
@@ -270,6 +291,8 @@ def update_ai_settings():
         url = str(data["base_url"] or "").strip()
         if url and not re.match(r"^https?://[^\s]+$", url):
             return error("The server address must start with http:// or https://")
+        if url and _blocked_host(url):
+            return error("That address isn't allowed. Use the AI server's own address.")
         set_setting(db, f"base_url:{pid}", url or None)
     if data.get("activate"):
         set_setting(db, "ai_provider", pid)
@@ -296,6 +319,10 @@ def reveal_ai_key():
     if pid not in PROVIDERS:
         return error("Unknown AI provider")
     state = ai.states[pid]
+    if state.source == "environment":
+        # Set by whoever runs the server; teachers can replace it here but not read it.
+        return {"api_key": None, "source": state.source, "saved_at": None,
+                "message": "This key is set on the server (an environment variable), so it can't be shown here."}
     return {"api_key": state.api_key or None, "source": state.source, "saved_at": _saved_at(get_db(), pid)}
 
 

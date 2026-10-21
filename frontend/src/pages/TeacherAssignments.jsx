@@ -109,14 +109,19 @@ function Progress({ id, onClose }) {
         {a.due_date ? ` · due ${new Date(`${a.due_date}T00:00`).toLocaleDateString()}` : ""} · {done} of {students.length} finished
       </p>
       <table className="table">
-        <thead><tr><th>Student</th><th>Class</th><th>Status</th>{a.kind === "quiz" && <th>Best score</th>}<th>Finished</th><th /></tr></thead>
+        <thead><tr><th>Student</th><th>Class</th><th>Status</th>{a.kind === "quiz" && <th>Score (first try)</th>}<th>Finished</th><th /></tr></thead>
         <tbody>
           {students.map((s) => (
             <tr key={s.id}>
               <td>{s.name}</td>
               <td className="small muted">{s.grade ? `Class ${s.grade}` : "—"}</td>
               <td><span className={`tag ${s.state === "done" ? "positive" : s.state === "started" ? "accent" : ""}`}>{s.state === "done" ? "Finished" : s.state === "started" ? "Started" : "Not started"}</span></td>
-              {a.kind === "quiz" && <td className="num">{s.total ? `${s.score}/${s.total} (${Math.round((100 * s.score) / s.total)}%)` : "—"}</td>}
+              {a.kind === "quiz" && (
+                <td className="num">
+                  {s.total ? `${s.score}/${s.total} (${Math.round((100 * s.score) / s.total)}%)` : "—"}
+                  {s.attempts > 1 && <span className="small muted"> · best {s.best_score}/{s.total} in {s.attempts} tries</span>}
+                </td>
+              )}
               <td className="small muted">{s.completed_at ? timeAgo(s.completed_at) : "—"}</td>
               <td><a className="icon-btn" href={`/print/student/${s.id}`} target="_blank" rel="noopener" title="Progress report" aria-label={`Progress report for ${s.name}`}><FileDown size={14} /></a></td>
             </tr>

@@ -172,6 +172,15 @@ CREATE TABLE IF NOT EXISTS assignment_done (
     PRIMARY KEY (assignment_id, user_id)
 );
 
+-- Chapters of the study notes a learner has marked as read ("ch-0", "ch-1", ...), synced across devices.
+CREATE TABLE IF NOT EXISTS notes_read (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    slug TEXT NOT NULL,
+    chapter TEXT NOT NULL,
+    read_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, slug, chapter)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,

@@ -1,4 +1,4 @@
-"""TatvaX v2.5: a multilingual AI tutor, assessment platform and AI school companion (TatvAI)."""
+"""TatvaX v2.6: a multilingual AI tutor, assessment platform and AI school companion (TatvAI)."""
 
 import logging
 import os
@@ -16,7 +16,7 @@ from .security import limiter, require_json_for_writes
 from .translation import Translator
 from .tutor import Tutor
 
-__version__ = "2.6.0"
+__version__ = "2.6.1"
 
 
 @dataclass
@@ -33,7 +33,7 @@ CONTENT_SECURITY_POLICY = "; ".join([
     "style-src 'self' 'unsafe-inline'",  # React style props and KaTeX inline styles
     "font-src 'self' data:",
     "worker-src 'self'",
-    "img-src 'self' data:",
+    "img-src 'self' data: blob:",  # blob: lets the browser shrink a photo before it is sent
     "media-src 'self' blob:",
     "connect-src 'self'",
     "frame-ancestors 'none'",
@@ -91,7 +91,7 @@ def create_app(overrides: dict | None = None) -> Flask:
         ai.load({row["key"]: row["value"] for row in conn.execute("SELECT key, value FROM settings")})
     finally:
         conn.close()
-    translator = Translator(ai)
+    translator = Translator(ai, web=app.config["WEB_TRANSLATION"])
     app.extensions["tatvax"] = Services(
         ai=ai,
         translator=translator,
@@ -111,6 +111,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(assignments.teacher_bp)
     app.register_blueprint(reports.bp)
     app.before_request(require_json_for_writes)
+    app.before_request(sync_ai_settings)
     app.teardown_appcontext(db.close_db)
 
     register_frontend(app)
@@ -142,6 +143,21 @@ def create_app(overrides: dict | None = None) -> Flask:
         return "Something went wrong on our side. Please try again.", 500
 
     return app
+
+
+def sync_ai_settings():
+    """With several server processes, a teacher's AI settings are saved by one of them. Every other
+    process picks the change up from the database on its next API request."""
+    from flask import current_app
+
+    if not request.path.startswith("/api/"):
+        return None
+    rows = db.get_db().execute(
+        "SELECT key, value FROM settings WHERE key IN ('nvidia_api_key', 'ai_model', 'ai_provider') "
+        "OR key LIKE 'api_key:%' OR key LIKE 'ai_model:%' OR key LIKE 'base_url:%'"
+    ).fetchall()
+    current_app.extensions["tatvax"].ai.sync({row["key"]: row["value"] for row in rows})
+    return None
 
 
 FRONTEND_MISSING = """<!doctype html><meta charset="utf-8"><title>TatvaX</title>
