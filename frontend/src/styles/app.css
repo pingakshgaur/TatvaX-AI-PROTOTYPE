@@ -836,10 +836,10 @@ a.list-row:hover, button.list-row:hover { background: var(--surface-hover); }
 .chat {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  height: calc(100dvh - var(--topbar-height));
+  height: calc(100dvh - var(--topbar-height) - var(--demo-bar-height, 0px));
 }
 
-.chat.has-offline-bar { height: calc(100dvh - var(--topbar-height) - 34px); }
+.chat.has-offline-bar { height: calc(100dvh - var(--topbar-height) - var(--demo-bar-height, 0px) - 34px); }
 
 .chat-history {
   display: flex;

@@ -181,6 +181,28 @@ CREATE TABLE IF NOT EXISTS notes_read (
     PRIMARY KEY (user_id, slug, chapter)
 );
 
+-- Roles, ranked by position (higher outranks lower), each with a JSON list of permissions.
+-- key marks the built-in roles: owner (always top), admin, teacher, student (the base role, always bottom).
+CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY,
+    key TEXT UNIQUE,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#64748b',
+    position INTEGER NOT NULL,
+    permissions TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL
+);
+
+-- Roles held, besides the base role everyone has.
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TEXT NOT NULL,
+    assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    PRIMARY KEY (user_id, role_id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -265,6 +287,9 @@ def init_db(path: str) -> None:
         conn.executescript(SCHEMA)
         migrate(conn)
         conn.commit()
+        from . import roles
+
+        roles.ensure_defaults(conn)
     finally:
         conn.close()
 

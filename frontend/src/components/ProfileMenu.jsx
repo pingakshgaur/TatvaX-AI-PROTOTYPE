@@ -121,7 +121,7 @@ export default function ProfileMenu({ onAccount }) {
               <div>
                 <strong>{registered ? user.name : t("guest")}</strong>
                 <span className="sub">
-                  {t("level")} {level}{user?.grade ? ` · Class ${user.grade}` : ""}{user?.role === "teacher" ? " · Teacher" : ""}
+                  {t("level")} {level}{user?.grade ? ` · Class ${user.grade}` : ""}{user?.roles?.length ? ` · ${user.top_role.name}` : ""}
                   {streak > 0 ? ` · ${streak} day streak` : ""}
                 </span>
               </div>

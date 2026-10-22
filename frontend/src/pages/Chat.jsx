@@ -12,6 +12,7 @@ import { Dialog, EmptyState, Markdown } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api, ApiError, streamChat } from "../lib/api.js";
 import { copyText } from "../lib/clipboard.js";
+import { can } from "../lib/permissions.js";
 import { timeAgo } from "../lib/format.js";
 import { SUGGESTIONS } from "../lib/i18n.js";
 import { plainText } from "../lib/markdown.js";
@@ -631,6 +632,9 @@ export default function Chat({ mode }) {
               </button>
             </div>
           )}
+          {!can(app, user, "ask_tutor") ? (
+            <p className="notice-line" role="status">Your role doesn't include asking the tutor. Ask your teacher if you need it.</p>
+          ) : (
           <form className="composer-box" onSubmit={(e) => { e.preventDefault(); if (busy) controllerRef.current?.abort(); else send(input, photo?.dataUrl); }}>
             {photo && (
               <div className="photo-preview">
@@ -653,11 +657,13 @@ export default function Chat({ mode }) {
             <div className="composer-tools">
               <button className={`icon-btn bordered mic${listening ? " listening" : ""}`} type="button" onClick={toggleMic}
                 aria-label={t("voice_input")} title={t("voice_input")} aria-pressed={listening}><Mic size={16} /></button>
-              <label className="icon-btn bordered photo-btn" title="Ask about a photo, for example a textbook problem">
-                <ImagePlus size={16} />
-                <span className="sr-only">Add a photo</span>
-                <input type="file" accept="image/*" hidden onChange={(e) => { attachPhoto(e.target.files?.[0]); e.target.value = ""; }} />
-              </label>
+              {can(app, user, "photo_questions") && (
+                <label className="icon-btn bordered photo-btn" title="Ask about a photo, for example a textbook problem">
+                  <ImagePlus size={16} />
+                  <span className="sr-only">Add a photo</span>
+                  <input type="file" accept="image/*" hidden onChange={(e) => { attachPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+              )}
               {input && (
                 <>
                   <button className="icon-btn bordered" type="button" onClick={copyDraft} aria-label="Copy what you typed" title={t("copy")}>
@@ -674,6 +680,7 @@ export default function Chat({ mode }) {
               </button>
             </div>
           </form>
+          )}
           <p className="composer-note">{t("composer_note")}</p>
         </div>
       </section>

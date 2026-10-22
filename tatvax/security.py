@@ -98,21 +98,3 @@ def require_json_for_writes():
 def client_ip() -> str:
     # Behind a reverse proxy, set TATVAX_BEHIND_PROXY=1 so ProxyFix fills remote_addr correctly.
     return request.remote_addr or "unknown"
-
-
-def require_role(*roles):
-    def decorator(view):
-        @wraps(view)
-        def wrapper(*args, **kwargs):
-            from .users import current_user
-
-            user = current_user()
-            if user is None or user["is_guest"]:
-                return error("Please sign in first", 401)
-            if roles and user["role"] not in roles:
-                return error("You don't have access to this page", 403)
-            return view(*args, **kwargs)
-
-        return wrapper
-
-    return decorator

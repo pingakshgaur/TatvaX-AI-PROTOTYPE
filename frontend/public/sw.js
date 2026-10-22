@@ -1,6 +1,6 @@
 // TatvaX service worker: installable app shell and offline study notes.
 // Build assets have content hashes in their names, so they are cached forever on first use.
-const VERSION = "tatvax-2.6.1";
+const VERSION = "tatvax-2.7.0";
 const MAX_ASSETS = 150; // old builds' files are dropped beyond this
 const PRECACHE = ["/", "/manifest.webmanifest", "/theme-boot.js", "/icons/icon.svg", "/icons/icon-192.png"];
 // API reads that may be served from cache while offline.

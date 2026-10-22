@@ -8,7 +8,7 @@ import sqlite3
 from flask import Blueprint, current_app, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import languages
+from . import languages, roles
 from .db import get_db, now_iso
 from .gamification import level_info
 from .security import client_ip, error, limiter
@@ -43,7 +43,8 @@ def public_user(user) -> dict | None:
         "id": user["id"],
         "name": user["name"],
         "email": user["email"],
-        "role": user["role"],
+        "role": user["role"],  # "teacher" for anyone whose roles open the teacher console, else "student"
+        **roles.public_access(get_db(), user),
         "is_guest": bool(user["is_guest"]),
         "language": user["language"],
         "grade": user["grade"],
@@ -133,6 +134,8 @@ def update_me():
         db = get_db()
         assignments = ", ".join(f"{column} = ?" for column in updates)
         db.execute(f"UPDATE users SET {assignments} WHERE id = ?", (*updates.values(), user["id"]))
+        if "grade" in updates:
+            roles.refresh_cache(db, [user["id"]])  # having a class decides whether staff roles count as staff
         db.commit()
     return {"user": public_user(current_user())}
 
@@ -167,24 +170,29 @@ def register():
             db.rollback()
             return error("An account with this email already exists", 409)
 
-        # The first account on a fresh install becomes the teacher/admin. After that, teacher
-        # accounts need the TATVAX_TEACHER_CODE.
+        # The first account on a fresh install becomes the Owner, with every permission. After that,
+        # the TATVAX_TEACHER_CODE gives the Teacher role; everyone else starts with the base role.
         has_registered = db.execute("SELECT 1 FROM users WHERE is_guest = 0 LIMIT 1").fetchone()
         teacher_code = current_app.config["TEACHER_CODE"]
-        role = "student"
+        give = None
         if not has_registered:
-            role = "teacher"
+            give = "owner"
         elif data.get("teacher_code"):
             if not teacher_code or not hmac.compare_digest(str(data["teacher_code"]), teacher_code):
                 db.rollback()
                 return error("That teacher code isn't valid")
-            role = "teacher"
+            give = "teacher"
+            if roles.role_id(db, "teacher") is None:
+                db.rollback()
+                return error("The Teacher role has been deleted, so the teacher code can't be used. Ask an admin to give you a role.")
 
         db.execute(
-            """UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, is_guest = 0, language = ?
+            """UPDATE users SET name = ?, email = ?, password_hash = ?, is_guest = 0, language = ?
                WHERE id = ?""",
-            (name, email, password_hash, role, language, user["id"]),
+            (name, email, password_hash, language, user["id"]),
         )
+        if give:
+            roles.assign(db, user["id"], roles.role_id(db, give))
         db.commit()
     except sqlite3.IntegrityError:
         db.rollback()

@@ -1,4 +1,4 @@
-# TatvaX v2.6.1
+# TatvaX v2.7
 
 **A multilingual AI tutor, assessment platform and AI school companion for Indian students.**
 
@@ -7,6 +7,20 @@ Students ask questions by typing or speaking in any of 16 Indian languages, get 
 [Watch the v1 prototype in action](https://youtu.be/hqo_TAZh0ls)
 
 ---
+
+## What's new in version 2.7
+
+**Roles and permissions**, ranked like a Discord server. Open **Teacher console > Roles**.
+
+- Every role has a rank. The **Owner** is always at the top with every permission; **Student**, the base role everyone has (guests included), is always at the bottom. The default ladder is Owner > Admin > Teacher > Student, and you can add your own roles in between (for example "Class monitor" or "Head of science").
+- Each role has its own permissions: *Administrator* (everything), *Manage roles*, *Manage AI settings*, *Manage study notes*, *Manage assignments*, *View students*, *View class analytics* and *Read feedback*. The base role's permissions decide what every learner can do: *Ask the tutor*, *Ask with a photo*, *Take assessments* and *Use the translator*.
+- People can hold several roles and get the permissions of all of them. Their highest role is their rank.
+- The ranking is enforced: you can only create, edit, move, delete or hand out roles below your own highest role, you can't give out a permission you don't have yourself, and you can't change the roles of anyone ranked level with or above you.
+- Only the Owner can pass ownership on (confirmed with their password); the former Owner keeps the Admin role.
+- The teacher console shows each person only the tabs their roles allow.
+- **Upgrading:** the first teacher account becomes the Owner and any other existing teachers become Admins, so nobody loses access. New accounts made with the teacher code get the Teacher role (notes, assignments, students, analytics and feedback, but not AI settings or roles).
+
+**Demo school**: `python run.py --demo` opens a ready-made school with staff in every role and a month of student activity, for presentations. A demo bar switches between six accounts (Principal, Teacher, Class Monitor, Star student, Hindi learner, New visitor) in one click, with a "What to show" list of features for each (see [Demo school](#demo-school-for-presentations)).
 
 ## What's new in version 2.6.1
 
@@ -105,7 +119,7 @@ Version 2 is a complete rewrite of the [v1 prototype](https://github.com/pingaks
 | Motivation | None | XP, levels, daily streaks, 10 achievements, weekly class leaderboard |
 | Teachers | None | Teacher console: analytics, student table, content editor, feedback inbox |
 | Security | Hard-coded secret key, `debug=True` on `0.0.0.0`, feedback (with emails) saved to a public folder | Generated secret, local-only dev server, strict CSP, JSON-only writes (CSRF defence), rate limits, private feedback |
-| Tests | None | 124 backend tests, run on every push by GitHub Actions |
+| Tests | None | 141 backend tests, run on every push by GitHub Actions |
 
 Bugs fixed from v1 include: speech output stripped the vowel signs (matras) from every Indic sentence; good translations were thrown away whenever they contained the word "error"; word replacements turned "hardware" into "needs practiceware"; voice input crashed; the app crashed at start-up on a default Windows console.
 
@@ -135,6 +149,7 @@ From the v1 roadmap: AI integration (free NVIDIA-hosted models), user authentica
 - A student table with level, XP, questions, assessments, average score and last activity.
 - A Markdown content editor with live preview. Add a subject and the tutor, search and assessments use it immediately.
 - A feedback inbox.
+- **Roles**: a Discord-style ladder of roles (Owner > Admin > Teacher > ... > Student) with per-role permissions, so each person gets exactly the access they need.
 
 ---
 
@@ -162,7 +177,30 @@ cd ..
 python run.py
 ```
 
-Open **http://localhost:5000**. The first account you create becomes the **teacher/administrator**.
+Open **http://localhost:5000**. The first account you create becomes the **Owner**, with every permission.
+
+### Demo school (for presentations)
+
+```bash
+python run.py --demo
+```
+
+This opens **Sunrise Public School**, a fictional school with a month of history, kept in its own `instance-demo/` folder (your real `instance/` data is never touched).
+
+A **demo bar** at the top of every page switches between six accounts in one click, with no passwords. **What to show** lists the features to present for the account in use, each one a link:
+
+| Account | Shows |
+|---|---|
+| **Principal** (Owner) | Class analytics, **Roles and permissions**, AI settings, the notes editor, PDF reports, feedback |
+| **Teacher** | Assignments and who has finished, students and reports, the notes editor. No AI settings or Roles tab: the permission system at work |
+| **Class Monitor** | A student whose extra role opens the class analytics, and nothing more |
+| **Star student** | Daily goal, a 12-day streak, badges and leaderboard, review deck, assignments, assessment history, to-dos, the tutor |
+| **Hindi learner** | The whole interface in Hindi, a chat in Hindi, a full review deck, the progress report PDF |
+| **New visitor** | Everything a first-time visitor can do without an account |
+
+The demo bar and passwordless switching exist only when TatvaX is started with `--demo`. Every account can also sign in normally with the password `tatvax-demo` (the full list, including the Head of Department and the other students, is in `instance-demo/DEMO_ACCOUNTS.txt`).
+
+The school has 16 students in classes 6 to 10 learning in 12 languages, about 750 questions (including chats in Hindi, Tamil and Bengali), 120+ assessments, review cards, six assignments at different stages, to-dos, chapters read and parent feedback. Streaks and due dates are relative to the day the demo is built, so run `python run.py --demo-reset` on the day of a presentation to rebuild it. Answers come from the study notes until you add an AI key in **Teacher console > AI settings**.
 
 ### Turning on the AI tutor
 

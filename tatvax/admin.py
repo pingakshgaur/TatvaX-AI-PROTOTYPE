@@ -1,20 +1,19 @@
 """Teacher dashboard API: class analytics, the content editor (CMS), and feedback."""
 
+import ipaddress
 import re
-from datetime import date, timedelta
-
 import time
+from datetime import date, timedelta
+from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, request
 
-import ipaddress
-from urllib.parse import urlparse
-
 from . import gamification, knowledge
-from .quiz import subject_scores
 from .ai import PROVIDERS, RECOMMENDED_MODELS, AIUnavailable
 from .db import get_db, get_setting, now_iso, set_setting, today
-from .security import error, require_role
+from .quiz import subject_scores
+from .roles import require_permission
+from .security import error
 from .users import current_user
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -30,7 +29,7 @@ def _since(days: int) -> str:
 
 
 @bp.get("/overview")
-@require_role("teacher")
+@require_permission("view_analytics")
 def overview():
     db = get_db()
     week = _since(7)
@@ -81,7 +80,7 @@ def overview():
 
 
 @bp.get("/students")
-@require_role("teacher")
+@require_permission("view_students")
 def students():
     rows = get_db().execute(
         """SELECT u.id, u.name, u.email, u.grade, u.xp, u.created_at,
@@ -97,7 +96,7 @@ def students():
 
 
 @bp.get("/feedback")
-@require_role("teacher")
+@require_permission("view_feedback")
 def feedback():
     rows = get_db().execute(
         "SELECT id, rating, name, email, message, page, created_at FROM feedback ORDER BY id DESC LIMIT 200"
@@ -139,7 +138,7 @@ def _validate_document(data: dict, partial: bool) -> tuple[dict, str | None]:
 
 
 @bp.get("/documents/<slug>")
-@require_role("teacher")
+@require_permission("manage_content")
 def get_document(slug: str):
     doc = knowledge.get_document(get_db(), slug)
     if doc is None:
@@ -148,7 +147,7 @@ def get_document(slug: str):
 
 
 @bp.post("/documents")
-@require_role("teacher")
+@require_permission("manage_content")
 def create_document():
     data = request.get_json(silent=True) or {}
     kind = data.get("kind", "subject")
@@ -173,7 +172,7 @@ def create_document():
 
 
 @bp.put("/documents/<slug>")
-@require_role("teacher")
+@require_permission("manage_content")
 def update_document(slug: str):
     db = get_db()
     if knowledge.get_document(db, slug) is None:
@@ -190,7 +189,7 @@ def update_document(slug: str):
 
 
 @bp.delete("/documents/<slug>")
-@require_role("teacher")
+@require_permission("manage_content")
 def delete_document(slug: str):
     db = get_db()
     doc = knowledge.get_document(db, slug)
@@ -251,13 +250,13 @@ def _blocked_host(url: str) -> bool:
 
 
 @bp.get("/ai")
-@require_role("teacher")
+@require_permission("manage_ai")
 def ai_settings():
     return _ai_settings_response()
 
 
 @bp.put("/ai")
-@require_role("teacher")
+@require_permission("manage_ai")
 def update_ai_settings():
     """Save a provider's API key, model and (for Ollama/custom servers) base URL, and optionally make
     it the active provider. An empty api_key removes the saved key. Keys are stored server-side only;
@@ -311,7 +310,7 @@ def update_ai_settings():
 
 
 @bp.get("/ai/key")
-@require_role("teacher")
+@require_permission("manage_ai")
 def reveal_ai_key():
     """The full saved key, shown only when a teacher asks to reveal it in the AI settings tab."""
     ai = _ai()
@@ -327,7 +326,7 @@ def reveal_ai_key():
 
 
 @bp.get("/ai/models")
-@require_role("teacher")
+@require_permission("manage_ai")
 def list_ai_models():
     pid = request.args.get("provider") or _ai().active
     if pid not in PROVIDERS:
@@ -339,7 +338,7 @@ def list_ai_models():
 
 
 @bp.post("/ai/test")
-@require_role("teacher")
+@require_permission("manage_ai")
 def test_ai():
     data = request.get_json(silent=True) or {}
     try:

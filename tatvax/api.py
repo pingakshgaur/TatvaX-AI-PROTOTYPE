@@ -6,7 +6,7 @@ import re
 
 from flask import Blueprint, Response, current_app, request, stream_with_context
 
-from . import gamification, knowledge, languages, speech
+from . import gamification, knowledge, languages, roles, speech
 from .db import SCHOOL_TZ, connect, get_db, now_iso, today
 from .knowledge import library_index
 from .quiz import QuizError, subject_scores
@@ -45,6 +45,9 @@ def bootstrap():
             # Days (due dates, "today", streaks) follow the school's clock, not the device's.
             "today": today(),
             "utc_offset_minutes": int(SCHOOL_TZ.utcoffset(None).total_seconds() // 60),
+            # What someone with only the base role may do (before they have a profile).
+            "base_permissions": sorted(roles.access(db, None)["permissions"]),
+            "demo": bool(current_app.config.get("DEMO_MODE")),
         },
         "user": public_user(current_user()),
     }
@@ -80,6 +83,9 @@ def chat():
         return error("Invalid conversation")
 
     user = current_user(create=True)
+    blocked = roles.learning_allowed(get_db(), user, "ask_tutor") or (image and roles.learning_allowed(get_db(), user, "photo_questions"))
+    if blocked:
+        return error(blocked, 403)
     if not limiter.allow(f"chat:{user['id']}", current_app.config["CHAT_RATE_LIMIT"]):
         return error("You're asking very fast! Take a breath and try again in a minute.", 429)
 
@@ -187,6 +193,8 @@ def delete_conversation(conversation_id: int):
 def create_quiz():
     data = request.get_json(silent=True) or {}
     user = current_user(create=True)
+    if blocked := _quiz_blocked(user):
+        return blocked
     if _quiz_rate_limited(user):
         return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
     subjects = data.get("subjects")
@@ -242,11 +250,19 @@ def _quiz_rate_limited(user) -> bool:
     return not limiter.allow(f"quiz:{user['id']}", 6)
 
 
+def _quiz_blocked(user):
+    """An error response if this learner's roles don't allow starting assessments, else None."""
+    message = roles.learning_allowed(get_db(), user, "take_assessments")
+    return error(message, 403) if message else None
+
+
 @bp.post("/quiz/<int:quiz_id>/retry")
 def retry_quiz(quiz_id: int):
     user = current_user()
     if user is None:
         return error("Quiz not found", 404)
+    if blocked := _quiz_blocked(user):
+        return blocked
     if _quiz_rate_limited(user):
         return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
     try:
@@ -279,6 +295,8 @@ def retake_quiz(quiz_id: int):
     user = current_user()
     if user is None:
         return error("Quiz not found", 404)
+    if blocked := _quiz_blocked(user):
+        return blocked
     if _quiz_rate_limited(user):
         return error("That's a lot of quizzes! Please wait a minute before starting another.", 429)
     try:
@@ -424,6 +442,8 @@ def translate():
     if len(text) > 3000:
         return error("Please translate at most 3000 characters at a time")
     user = current_user(create=True)
+    if blocked := roles.learning_allowed(get_db(), user, "use_translator"):
+        return error(blocked, 403)
     if not limiter.allow(f"translate:{user['id']}", 20):
         return error("Too many translations. Please wait a minute.", 429)
     source = data.get("source", "auto")

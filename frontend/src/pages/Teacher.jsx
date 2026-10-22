@@ -1,5 +1,5 @@
 import {
-  BarChart3, ClipboardList, Cpu, Eye, FileDown, FilePenLine, Lock, MessageSquareText, PenLine, Plus, Save, Trash2, Users,
+  BarChart3, ClipboardList, Cpu, Eye, FileDown, FilePenLine, Lock, MessageSquareText, PenLine, Plus, Save, Shield, Trash2, Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -9,17 +9,20 @@ import { useCrumbs, useShell } from "../components/Shell.jsx";
 import { Dialog, EmptyState, Loading, Markdown, PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import AISettings from "./AISettings.jsx";
+import Roles from "./Roles.jsx";
 import TeacherAssignments from "./TeacherAssignments.jsx";
 import { api } from "../lib/api.js";
 import { formatNumber, shortDate, timeAgo } from "../lib/format.js";
 
+// Each tab needs a permission; people only see the tabs their roles allow.
 const TABS = [
-  ["overview", BarChart3, "overview"],
-  ["students", Users, "students"],
-  ["assignments", ClipboardList, "nav_assignments"],
-  ["content", FilePenLine, "content"],
-  ["feedback", MessageSquareText, "feedback"],
-  ["ai", Cpu, "ai_settings"],
+  ["overview", BarChart3, "overview", "view_analytics"],
+  ["students", Users, "students", "view_students"],
+  ["assignments", ClipboardList, "nav_assignments", "manage_assignments"],
+  ["content", FilePenLine, "content", "manage_content"],
+  ["feedback", MessageSquareText, "feedback", "view_feedback"],
+  ["ai", Cpu, "ai_settings", "manage_ai"],
+  ["roles", Shield, "roles", "manage_roles"],
 ];
 
 function useLoad(path, deps = []) {
@@ -272,20 +275,24 @@ export default function TeacherConsole() {
   const { t, user, app } = useApp();
   const { openAccount } = useShell();
   const params = useParams();
-  const tab = TABS.some(([name]) => name === params.tab) ? params.tab : "overview";
-  const tabLabel = TABS.find(([name]) => name === tab)[2];
+  const tabs = TABS.filter(([, , , permission]) => user?.permissions?.includes(permission));
+  const tab = tabs.some(([name]) => name === params.tab) ? params.tab : tabs[0]?.[0];
+  const tabLabel = tabs.find(([name]) => name === tab)?.[2] || "teacher_title";
   useCrumbs([{ label: t("nav_teacher"), to: "/teacher" }, { label: t(tabLabel) }]);
   // On narrow screens the tab row scrolls; keep the open tab visible.
   useEffect(() => {
     document.querySelector(".tabs .active")?.scrollIntoView({ inline: "center", block: "nearest" });
   }, [tab]);
 
-  if (!user || user.is_guest || user.role !== "teacher") {
+  if (!user || user.is_guest || !user.staff || !tab) {
+    const signedIn = user && !user.is_guest;
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Teacher access required"
-          action={<button className="btn" type="button" onClick={() => openAccount("login")}>{t("sign_in")}</button>}>
-          Sign in with a teacher account to view class analytics and edit the study notes.
+        <EmptyState icon={Lock} title={signedIn ? "Your role doesn't include the teacher console" : "Teacher access required"}
+          action={!signedIn && <button className="btn" type="button" onClick={() => openAccount("login")}>{t("sign_in")}</button>}>
+          {signedIn
+            ? "Ask someone with a higher role, such as an Admin or the Owner, to give you a role with the access you need."
+            : "Sign in with a teacher account to view class analytics and edit the study notes."}
         </EmptyState>
       </Panel>
     );
@@ -298,7 +305,7 @@ export default function TeacherConsole() {
           ? `AI tutor: ${app.ai_model} via ${app.ai_provider}`
           : <>The AI tutor is off, so students receive answers from the study notes. <Link to="/teacher/ai">Connect an AI provider</Link> (NVIDIA, Gemini and Groq have free tiers) to turn it on.</>} />
       <nav className="tabs" aria-label={t("teacher_title")}>
-        {TABS.map(([name, Icon, label]) => (
+        {tabs.map(([name, Icon, label]) => (
           <Link key={name} to={`/teacher/${name}`} className={name === tab ? "active" : ""} aria-current={name === tab ? "page" : undefined}>
             <Icon size={15} /> {t(label)}
           </Link>
@@ -310,6 +317,7 @@ export default function TeacherConsole() {
       {tab === "content" && <ContentEditor selected={params.slug} />}
       {tab === "feedback" && <Feedback />}
       {tab === "ai" && <AISettings />}
+      {tab === "roles" && <Roles />}
     </>
   );
 }

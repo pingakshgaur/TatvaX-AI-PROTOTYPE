@@ -57,7 +57,7 @@ const STRINGS = {
     offline: "You're offline. Study notes you've already opened are still available.",
     xp_gained: "+{n} XP", badge_earned: "Achievement unlocked", level_up: "Level {level} reached",
     error_generic: "Something went wrong. Please try again.",
-    teacher_title: "Teacher console", overview: "Overview", students: "Students", content: "Content", ai_settings: "AI settings",
+    teacher_title: "Teacher console", overview: "Overview", students: "Students", content: "Content", ai_settings: "AI settings", roles: "Roles",
     ai_online: "AI tutor online", ai_offline: "Notes mode",
   },
 

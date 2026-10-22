@@ -8,6 +8,7 @@ import { PageHeader, Panel } from "../components/ui.jsx";
 import { useApp } from "../context/AppContext.jsx";
 import { api } from "../lib/api.js";
 import { copyText } from "../lib/clipboard.js";
+import { can } from "../lib/permissions.js";
 import { canListen, listen, speak } from "../lib/voice.js";
 
 const MAX = 3000;
@@ -22,7 +23,7 @@ function saveHistory(items) {
 }
 
 export default function Translate() {
-  const { t, app, lang, notify, languageInfo } = useApp();
+  const { t, app, user, lang, notify, languageInfo } = useApp();
   const navigate = useNavigate();
   useCrumbs([{ label: t("nav_translate") }]);
 
@@ -112,6 +113,9 @@ export default function Translate() {
     <>
       <PageHeader eyebrow={t("group_practice")} title={t("nav_translate")}
         lede="Translate study questions, answers and notes between 16 Indian languages. Results appear as you type." />
+      {!can(app, user, "use_translator") && (
+        <p className="notice-line" role="status">Your role doesn't include the translator. Ask your teacher if you need it.</p>
+      )}
 
       <div className="translator">
         <section className="tr-pane" aria-label="Text to translate">

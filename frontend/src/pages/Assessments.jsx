@@ -12,6 +12,7 @@ import { Dialog, InlineMarkdown, Loading, Markdown, Meter, PageHeader, Panel } f
 import { useApp } from "../context/AppContext.jsx";
 import addTodo, { tomorrow } from "../lib/addTodo.js";
 import { api } from "../lib/api.js";
+import { can } from "../lib/permissions.js";
 
 const KEYS = ["A", "B", "C", "D"];
 const PRESETS = [5, 10, 15, 20, 30];
@@ -27,7 +28,8 @@ export const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Mat
 // ------------------------------------------------------------------ builder
 
 function Builder({ initialSubjects, initialTopic, onStart }) {
-  const { t, app, lang } = useApp();
+  const { t, app, lang, user } = useApp();
+  const allowed = can(app, user, "take_assessments");
   const [subjects, setSubjects] = useState(initialSubjects);
   const [topic, setTopic] = useState(initialTopic);
   const [count, setCount] = useState(10);
@@ -131,7 +133,8 @@ function Builder({ initialSubjects, initialTopic, onStart }) {
               {topic.trim() && <><dt>Topic</dt><dd>{topic}</dd></>}
             </dl>
             {error && <p className="form-error" role="alert">{error}</p>}
-            <button className="btn btn-lg btn-block" type="button" disabled={busy || !subjects.length} onClick={start}>
+            {!allowed && <p className="form-error">Your role doesn't include taking assessments. Ask your teacher if you need it.</p>}
+            <button className="btn btn-lg btn-block" type="button" disabled={busy || !subjects.length || !allowed} onClick={start}>
               {busy ? <><span className="spinner" aria-hidden="true" /> {t("making_quiz")}</> : <><Play size={16} /> {t("start_quiz")}</>}
             </button>
             {!subjects.length && <p className="hint" style={{ marginTop: 8 }}>Pick at least one subject to begin.</p>}

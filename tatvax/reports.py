@@ -9,7 +9,8 @@ from flask import Blueprint
 from . import gamification, knowledge, review
 from .quiz import subject_scores
 from .db import get_db, today
-from .security import error, require_role
+from .roles import require_permission
+from .security import error
 from .users import current_user
 
 bp = Blueprint("reports", __name__, url_prefix="/api")
@@ -115,7 +116,7 @@ def my_report():
 
 
 @bp.get("/admin/students/<int:student_id>/report")
-@require_role("teacher")
+@require_permission("view_students")
 def student_report_for_teacher(student_id: int):
     db = get_db()
     if db.execute("SELECT 1 FROM users WHERE id = ? AND is_guest = 0", (student_id,)).fetchone() is None:

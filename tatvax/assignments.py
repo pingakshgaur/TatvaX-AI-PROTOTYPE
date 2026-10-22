@@ -8,10 +8,11 @@ import re
 
 from flask import Blueprint, current_app, request
 
-from . import knowledge, languages
+from . import knowledge, languages, roles
 from .db import get_db, now_iso, today
 from .quiz import MODES, QuizError, _shuffle_options
-from .security import error, require_role
+from .roles import require_permission
+from .security import error
 from .users import current_user
 
 student_bp = Blueprint("assignments", __name__, url_prefix="/api/assignments")
@@ -117,6 +118,8 @@ def start_assignment(assignment_id: int):
     row = _visible(db, user, assignment_id)
     if row is None or row["kind"] != "quiz":
         return error("Assignment not found", 404)
+    if blocked := roles.learning_allowed(db, user, "take_assessments"):
+        return error(blocked, 403)
     open_quiz = db.execute(
         "SELECT id FROM quizzes WHERE assignment_id = ? AND user_id = ? AND completed_at IS NULL ORDER BY id DESC",
         (assignment_id, user["id"]),
@@ -163,7 +166,7 @@ def _class_students(db, grade):
 
 
 @teacher_bp.get("")
-@require_role("teacher")
+@require_permission("manage_assignments")
 def list_assignments():
     db = get_db()
     rows = db.execute("SELECT * FROM assignments ORDER BY archived, created_at DESC").fetchall()
@@ -187,7 +190,7 @@ def list_assignments():
 
 
 @teacher_bp.post("")
-@require_role("teacher")
+@require_permission("manage_assignments")
 def create_assignment():
     data = request.get_json(silent=True) or {}
     db = get_db()
@@ -233,7 +236,7 @@ def create_assignment():
 
 
 @teacher_bp.get("/<int:assignment_id>")
-@require_role("teacher")
+@require_permission("manage_assignments")
 def assignment_progress(assignment_id: int):
     db = get_db()
     row = db.execute("SELECT * FROM assignments WHERE id = ?", (assignment_id,)).fetchone()
@@ -248,7 +251,7 @@ def assignment_progress(assignment_id: int):
 
 
 @teacher_bp.patch("/<int:assignment_id>")
-@require_role("teacher")
+@require_permission("manage_assignments")
 def update_assignment(assignment_id: int):
     db = get_db()
     data = request.get_json(silent=True) or {}
@@ -266,7 +269,7 @@ def update_assignment(assignment_id: int):
 
 
 @teacher_bp.delete("/<int:assignment_id>")
-@require_role("teacher")
+@require_permission("manage_assignments")
 def delete_assignment(assignment_id: int):
     db = get_db()
     db.execute("UPDATE quizzes SET assignment_id = NULL WHERE assignment_id = ?", (assignment_id,))

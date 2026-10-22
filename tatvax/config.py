@@ -64,6 +64,9 @@ def build_config(overrides: dict | None = None) -> dict:
         # Without an AI provider, translation falls back to free public web services (Google's
         # translate endpoint, then MyMemory), which receive the text. TATVAX_WEB_TRANSLATION=off stops that.
         "WEB_TRANSLATION": bool(_env_bool("TATVAX_WEB_TRANSLATION", True)),
+        # Set by `python run.py --demo`: shows the demo bar and allows one-click (passwordless)
+        # switching between the demo school's accounts. Never set it on a real school's server.
+        "DEMO_MODE": bool(_env_bool("TATVAX_DEMO", False)),
         "CHAT_RATE_LIMIT": int(os.environ.get("TATVAX_CHAT_RATE_LIMIT", "20")),  # messages per minute per user
         "MAX_MESSAGE_CHARS": 2000,
         "MAX_CONTENT_LENGTH": 2 * 1024 * 1024,

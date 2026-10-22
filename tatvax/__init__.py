@@ -1,4 +1,4 @@
-"""TatvaX v2.6: a multilingual AI tutor, assessment platform and AI school companion (TatvAI)."""
+"""TatvaX v2.7: a multilingual AI tutor, assessment platform and AI school companion (TatvAI)."""
 
 import logging
 import os
@@ -8,7 +8,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
 
-from . import admin, api, assignments, db, knowledge, reports, review, todos, users
+from . import admin, api, assignments, db, demo, knowledge, reports, review, roles, todos, users
 from .ai import AIService
 from .config import build_config
 from .quiz import QuizMaster
@@ -16,7 +16,7 @@ from .security import limiter, require_json_for_writes
 from .translation import Translator
 from .tutor import Tutor
 
-__version__ = "2.6.1"
+__version__ = "2.7.0"
 
 
 @dataclass
@@ -110,6 +110,8 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(assignments.student_bp)
     app.register_blueprint(assignments.teacher_bp)
     app.register_blueprint(reports.bp)
+    app.register_blueprint(roles.bp)
+    app.register_blueprint(demo.bp)
     app.before_request(require_json_for_writes)
     app.before_request(sync_ai_settings)
     app.teardown_appcontext(db.close_db)

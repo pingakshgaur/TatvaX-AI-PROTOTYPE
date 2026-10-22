@@ -9,6 +9,7 @@ import { api } from "../lib/api.js";
 import { schoolToday } from "../lib/format.js";
 import { stopSpeaking } from "../lib/voice.js";
 import Celebration from "./Celebration.jsx";
+import DemoBar from "./DemoBar.jsx";
 import { AccountDialog, FeedbackDialog } from "./Dialogs.jsx";
 import ProfileMenu from "./ProfileMenu.jsx";
 import ThemeSwitch from "./ThemeSwitch.jsx";
@@ -70,7 +71,7 @@ function Sidebar({ open, onNavigate }) {
           {link("/", LayoutGrid, t("nav_overview"), "var(--c-teal)", { end: true })}
           {link("/subjects", Library, t("nav_subjects"), "var(--c-indigo)", { active: learnActive })}
           {link("/tatvai", Sparkles, t("nav_helpdesk"), "var(--c-plum)")}
-          {user && !user.is_guest && user.role !== "teacher"
+          {user && !user.is_guest && !user.staff
             && link("/assignments", ClipboardList, t("nav_assignments"), "var(--c-saffron)", { badge: counts.assignments })}
         </div>
         <div className="nav-group">
@@ -81,7 +82,7 @@ function Sidebar({ open, onNavigate }) {
           {link("/translate", Languages, t("nav_translate"), "var(--c-leaf)")}
           {link("/todos", ListChecks, t("nav_todos"), "var(--c-indigo)", { badge: counts.todos })}
         </div>
-        {user?.role === "teacher" && (
+        {user?.staff && (
           <div className="nav-group">
             <span className="eyebrow">{t("group_admin")}</span>
             {link("/teacher", ShieldCheck, t("nav_teacher"), "var(--c-teal)")}
@@ -146,7 +147,7 @@ export default function Shell() {
       <div className="shell">
         <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
         {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
-        <div className="main-column">
+        <div className={`main-column${app.demo ? " has-demo" : ""}`}>
           <header className="topbar">
             <button className="icon-btn menu-button" type="button" aria-label="Open navigation" aria-expanded={menuOpen}
               onClick={() => setMenuOpen(true)}><Menu size={18} /></button>
@@ -170,6 +171,7 @@ export default function Shell() {
               <ProfileMenu onAccount={openAccount} />
             </div>
           </header>
+          {app.demo && <DemoBar />}
           {!online && <div className="offline-bar" role="status">{t("offline")}</div>}
           <main id="main" tabIndex={-1} className={fullBleed ? "" : "page"}>
             <div className={fullBleed ? "" : "page-enter"} key={fullBleed ? "chat" : location.pathname}>

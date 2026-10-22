@@ -78,7 +78,9 @@ function RegisterForm({ onDone }) {
   const { error, busy, submit } = useSubmit(async (data) => {
     const res = await api("/api/auth/register", { method: "POST", body: { ...data, language: lang } });
     setUser(res.user);
-    notify(res.user.role === "teacher" ? "Teacher account created" : `Welcome, ${res.user.name}`, { kind: "success" });
+    notify(res.user.is_owner ? "Account created. You're the Owner, with every permission."
+      : res.user.top_role && res.user.roles?.length ? `Welcome, ${res.user.name} (${res.user.top_role.name})` : `Welcome, ${res.user.name}`,
+    { kind: "success" });
     onDone();
   });
   return (
